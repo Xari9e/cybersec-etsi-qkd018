@@ -36,7 +36,7 @@ qkd_network
         └── ... stessa struttura local/remote
 ```
 
-- È un **grafo** $G=(V,E)$: i nodi sono le `qkdn`, gli archi sono i `phys_link` (adiacenze fisiche) e i `svc_link` (relazioni logiche di chiave, anche multi-hop via trusted node).
+- È un **grafo** $`G=(V,E)`$: i nodi sono le `qkdn`, gli archi sono i `phys_link` (adiacenze fisiche) e i `svc_link` (relazioni logiche di chiave, anche multi-hop via trusted node).
 - I link sono identificati da UUID e puntano alle estremità tramite *leafref*, cioè riferimenti validati verso nodi e interfacce esistenti.
 - Serve alla **topology discovery** (§5.1 dello standard): l'orchestrator ottiene una vista astratta e indipendente dal vendor di ogni dominio e la può comporre in una vista multi-dominio.
 
@@ -59,9 +59,9 @@ Le **notifiche** sono la parte reattiva della gestione delle risorse:
 
 Serve a §5.2 (stato della rete e inventario delle risorse) e §5.5 (notifiche). È il modulo da cui si vede **quanta chiave è disponibile** su ogni link:
 
-$$
+```math
 \text{eskr} \approx \text{skr} - \text{expected\_consumption}
-$$
+```
 
 (lettura intuitiva dei tre campi, non una formula dello standard). È il dato su cui l'orchestrator decide se un cammino regge una nuova applicazione.
 

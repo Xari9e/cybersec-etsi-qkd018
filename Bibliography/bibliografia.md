@@ -22,15 +22,15 @@
 - **Trasporto:** NETCONF (RFC 6241) o RESTCONF (RFC 8040), codifica XML/JSON.
 - **Sicurezza (§7):** il materiale di chiave **non** transita mai per controller/orchestrator.
 
-Una metrica utile da mettere in slide (vista "di inventario" di un link $\ell$):
+Una metrica utile da mettere in slide (vista "di inventario" di un link $`\ell`$):
 
-$$
+```math
 \text{ESKR}_\ell(t) \;=\; \text{SKR}_\ell(t) \;-\; \sum_{a \,\in\, \mathcal{A}_\ell} r_a(t),
 \qquad
 \text{path ammissibile se } \min_{\ell \in p} \text{ESKR}_\ell \;\ge\; r_{\text{richiesta}}
-$$
+```
 
-dove $\mathcal{A}_\ell$ sono le applicazioni che consumano chiave sul link e $r_a$ il loro rate. (Formalizzazione nostra, ispirata ai parametri SKR/ESKR dei modelli YANG: non è una formula dello standard.)
+dove $`\mathcal{A}_\ell`$ sono le applicazioni che consumano chiave sul link e $`r_a`$ il loro rate. (Formalizzazione nostra, ispirata ai parametri SKR/ESKR dei modelli YANG: non è una formula dello standard.)
 
 ---
 
