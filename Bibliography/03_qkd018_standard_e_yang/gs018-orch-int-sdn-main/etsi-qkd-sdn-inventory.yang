@@ -1,0 +1,512 @@
+/* Copyright 2022 ETSI
+Licensed under the BSD-3 Clause (https://forge.etsi.org/legal-matters) */
+
+module etsi-qkd-sdn-inventory {
+
+  yang-version "1.1";
+
+  namespace "urn:etsi:qkd:yang:etsi-qkd-sdn-inventory";
+
+  prefix "qkdnw-invt";
+  
+  import ietf-inet-types { prefix "inet"; }
+  import etsi-qkd-sdn-node { prefix "etsi-qkdn"; }
+  import etsi-qkd-node-types { prefix "etsi-qkdn-types"; }
+  import etsi-qkd-sdn-topology { prefix "qkdnw-tplg"; }
+
+  organization "ETSI ISG QKD";
+
+  contact
+    "https://www.etsi.org/committee/qkd
+    djcha@sktelecom.com";
+
+  description
+    "This module contains the groupings and containers composing the software-defined QKD network 
+    inventory information models specified in ETSI GS QKD 018 V1.1.1";
+
+  revision 2022-02-22 {
+    description "Refinement of the YANG model to make it compatible with the ETSI ISG QKD 015 V2.1.1";
+  }
+
+  revision 2021-09-20 {
+    description "The YANG module for QKD network inventory.";
+  }
+ 
+  identity PATH-RESTORATION-TYPE {
+    description "Base identity from which path restoration types are derived.";
+  }
+  identity AUTOMATIC {
+    base PATH-RESTORATION-TYPE;
+    description "The path restoration starts automatically.";
+  }
+  identity MANUAL {
+    base PATH-RESTORATION-TYPE;
+    description "The path restoration starts manually.";
+  }
+  typedef path-restoration-type {
+    type identityref {
+      base PATH-RESTORATION-TYPE;
+    }
+    description "This type represents path restoration types of QKD service link.";
+  }
+
+  grouping qkdn_id_ref {
+    leaf qkdn_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn/qkdnw-tplg:qkdn_id";
+      }
+      description "Used to reference a SD-QKD node.";
+    }
+  }
+
+  grouping qkdi_id_ref {
+    leaf qkdi_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn[qkdnw-tplg:qkdn_id=current()/../qkdn_id_ref]"+
+          "/qkdnw-tplg:qkd_interfaces/qkdnw-tplg:qkdi/qkdnw-tplg:qkdi_id";
+      }
+      description "Used to reference an interface of the SD-QKD node. Interfaces are identified to the SD-QKD node that contains them.";
+    }
+  }
+
+  grouping phys_link_id_ref {
+    leaf phys_link_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_phys_links/qkdnw-tplg:phys_link/qkdnw-tplg:phys_link_id";
+      }
+    }
+    description "Used to reference a QKD physical link.";
+  }
+
+  grouping svc_link_id_ref {
+    leaf svc_link_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link/qkdnw-tplg:svc_link_id";
+      }
+    }
+    description "Used to reference a QKD service link.";    
+  }
+
+  grouping phys_link_key_rate_perf {
+    leaf expected_consumption {
+        type uint32;
+        units "bps";
+        description "Sum of all the applications’ bandwidths (in bits per second) that are on this particular QKD physical link.";
+    }
+    
+    leaf skr {
+        type uint32;
+        units "bps";
+        description "Secret key generation rate (in bits per second) of each QKD physical link.";
+    }
+
+    leaf eskr {
+        type uint32;
+        units "bps";
+        description "Effective secret key generation rate (in bits per second) of each QKD physical link available after all the applications’ consumption.";
+    }
+  }
+
+  grouping svc_link_key_rate_perf {
+    leaf expected_consumption {
+        type uint32;
+        units "bps";
+        description "The bandwidth (in bits per second) of the external application that is consuming keys from QKD service link.";
+    }
+    
+    leaf skr {
+        type uint32;
+        units "bps";
+        description "Secret key generation rate (in bits per second) of QKD service link.";
+    }
+
+    leaf eskr {
+        type uint32;
+        units "bps";
+        description "Effective secret key generation rate (in bits per second) of QKD service link after the external application’s consumption.";
+    }
+  }
+
+  grouping phys_link_perf {
+    list phys_link_perf {
+      config false;
+      key "type";
+
+      leaf type {
+        type etsi-qkdn-types:phys-perf-types;
+        description "Type of the physical performance value to be exposed to the controller.";
+      }
+
+      leaf value {
+        type decimal64 {
+          fraction-digits 3;
+        }
+        config false;
+        description "Numerical value for the performance parameter type specified above.";
+      }
+    }
+  }
+
+  grouping qkdn_details {
+    uses etsi-qkdn:qkdn_version;
+
+    uses etsi-qkdn:qkdn_capabilities;
+
+    uses etsi-qkdn:qkdn_location_id {
+      refine qkdn_location_id {
+      default None;
+        description "The location of the secure area that contains the SD-QKD node to be specified.";
+      }
+    }
+    
+    container KME_ip_port {
+      description "The ip address and port number of the key management entity in SD-QKD node that provides QKD keys to external application.";
+
+      leaf KME_ip {
+        type inet:ip-address;
+      }
+
+      leaf KME_port {
+        type inet:port-number;
+      }
+    }
+  }
+
+  grouping qkdi_details {
+    leaf role_support {
+        type etsi-qkdn-types:qkd-role-types;
+        description "QKD node support for key relay mode services.";
+    }
+
+    uses etsi-qkdn:qkdi_model;
+
+    uses etsi-qkdn:qkdi_type;
+
+    uses etsi-qkdn:qkdi_att_point;
+  }
+
+  grouping phys_link_details {
+    leaf enable {
+      type boolean;
+      default true;
+      description "This value allows the key generation process for a given link to be enabled or disabled. 
+        If true, the key generation process is enabled.";
+    }    
+    
+    leaf wavelength {
+        type etsi-qkdn-types:wavelength; 
+        units "nm";   
+        description "Wavelength (nm) to be used for the quantum channel. 
+          If the interface is not tunable, this parameter can by bypassed.";
+    }
+
+    container performance {
+      uses phys_link_key_rate_perf;
+      uses phys_link_perf {
+        when "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_phys_links/qkdnw-tplg:phys_link/qkdnw-tplg:link_type = 'PHYS'";
+        description "Performance of the specific physical link.";
+      }
+    }
+  }
+
+  grouping phys_link_status {
+    leaf phys_link_status {
+      config false;
+      type etsi-qkdn-types:link-status-types;
+      description "Status of the QKD physical link.";
+    }
+  }
+
+  grouping svc_link_details {
+    leaf bandwidth {
+      type uint32;
+      units "bps";
+      description "Required bandwidth (bps) for the key association link. Used to reserve bandwidth 
+        from the physical link to support the service link as an internal application.";
+    }
+
+    container performance {
+      uses svc_link_key_rate_perf; 
+    }
+    
+    container path_restoration {
+      description "Container for path restoration conditions when any failure happens in the end-to-end key relay path.";
+
+      leaf type {
+        type path-restoration-type;
+        description "path restoration type of QKD service link.";
+      }
+
+      leaf hold_off_time {
+        type uint32;
+        units "milliseconds";
+        description "Time to wait before attempting restoration.";
+      }
+    }
+  }
+
+  grouping svc_link_status {
+    leaf svc_link_status {
+      config false;
+      type etsi-qkdn-types:link-status-types;
+      description "Status of the QKD service link.";
+    }
+  }
+
+
+  augment "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn" {
+    description "The inventory of a SD-QKD node.";
+
+    uses qkdn_details;
+    uses etsi-qkdn:qkdn_status;    
+  }
+
+  augment "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn/qkdnw-tplg:qkd_interfaces/qkdnw-tplg:qkdi" {
+    description "The inventory of an interface (QKD module) of the SD-QKD node.";
+    
+    uses qkdi_details;
+    uses etsi-qkdn:qkdi_status;
+  }
+
+  augment "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_phys_links/qkdnw-tplg:phys_link" {
+    description "The inventory of a QKD physical link.";
+
+    uses phys_link_details;
+    uses phys_link_status;    
+  }
+
+  augment "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link" {
+    description "The inventory of a QKD service link.";
+
+    uses svc_link_details;
+    uses svc_link_status;
+
+  }
+
+  notification sdqkdn_new {
+    container qkdn {
+      uses qkdn_id_ref;
+      uses qkdn_details;
+      leaf qkdn_status {
+        type etsi-qkdn-types:qkdn-status-types;
+      }
+      leaf reason {
+        type string;
+        description "This notification includes the information about the new SD-QKD node installed in the QKD network.";
+      }
+    }
+  }
+
+  notification sdqkdn_interface_new {
+    container qkd_interface {
+      uses qkdn_id_ref;
+      uses qkdi_id_ref;
+      uses etsi-qkdn:qkdi_status;
+      leaf reason {
+        type string;
+        description "This notification includes the information about the new interface of SD-QKD node installed in the QKD network.";
+      }
+    }
+  }
+
+  notification sdqkdn_phys_link_new {
+    container qkd_phys_link {
+      uses phys_link_id_ref;
+      uses phys_link_status;
+      container phys_link_local_qkdn {
+        uses qkdn_id_ref;
+        uses qkdi_id_ref;
+      }
+      container phys_link_remote_qkdn {
+        uses qkdn_id_ref;
+        uses qkdi_id_ref;
+      }
+      leaf reason {
+        type string;
+        description "This notification includes the information about the new QKD physical link installed in the QKD network.";
+      }
+    }
+  }
+ 
+  notification sdqkdn_svc_link_new {
+    container qkd_svc_link {
+      uses svc_link_id_ref;
+      uses svc_link_status;
+      container svc_link_local_qkdn {
+        uses qkdn_id_ref;
+        uses qkdi_id_ref;
+      }
+      container svc_link_remote_qkdn {
+        uses qkdn_id_ref;
+        uses qkdi_id_ref;
+      }
+      leaf reason {
+        type string;
+        description "This notification includes the information about the new QKD service link deployed in the QKD network.";
+      }
+    }
+  }
+
+  notification sdqkdn_phys_link_perf_update {
+    container qkd_phys_link {
+      uses phys_link_id_ref;
+      uses phys_link_key_rate_perf;
+      uses phys_link_perf;
+    }
+  }
+
+  notification sdqkdn_svc_link_perf_update {
+    container qkd_svc_link {
+      uses svc_link_id_ref;
+      uses svc_link_key_rate_perf;
+    }
+  }
+
+  notification sdqkdn_phys_link_overloaded {
+    container qkd_phys_link {
+      uses phys_link_id_ref;
+      uses phys_link_key_rate_perf;
+    }
+  }
+
+  notification sdqkdn_svc_link_overloaded {
+    container qkd_svc_link {
+      uses svc_link_id_ref;
+      uses svc_link_key_rate_perf;
+    }
+  }
+
+  notification alarm {
+    container qkdn {
+      uses qkdn_id_ref;
+      leaf qkdn_status {
+        type etsi-qkdn-types:qkdn-status-types;
+        description "Status of a SD-QKD node.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+
+    container interface {
+      uses qkdn_id_ref;
+      uses qkdi_id_ref;
+      leaf status {
+        type etsi-qkdn-types:iface-status-types;
+        description "Status of a QKD interface of the SD-QKD node.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+
+    container phys_link {
+      uses phys_link_id_ref;
+      leaf status {
+        type etsi-qkdn-types:link-status-types;
+        description "Status of a QKD physical link.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+
+    container svc_link {
+      uses svc_link_id_ref;
+      leaf status {
+        type etsi-qkdn-types:link-status-types;
+        description "Status of a QKD service link.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+  }
+
+  notification event {
+    container qkdn {
+      uses qkdn_id_ref;
+      leaf qkdn_status {
+        type etsi-qkdn-types:qkdn-status-types;
+        description "Status of a SD-QKD node.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+
+    container interface {
+      uses qkdn_id_ref;
+      uses qkdi_id_ref;
+      leaf status {
+        type etsi-qkdn-types:iface-status-types;
+        description "Status of a QKD interface of the SD-QKD node.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+
+    container phys_link {
+      uses phys_link_id_ref;
+      leaf status {
+        type etsi-qkdn-types:link-status-types;
+        description "Status of a QKD physical link.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+
+    container svc_link {
+      uses svc_link_id_ref;
+      leaf status {
+        type etsi-qkdn-types:link-status-types;
+        description "Status of a QKD service link.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+  }
+}

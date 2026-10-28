@@ -1,0 +1,433 @@
+/* Copyright 2022 ETSI
+Licensed under the BSD-3 Clause (https://forge.etsi.org/legal-matters) */
+
+module etsi-qkd-sdn-connectivity {
+
+  yang-version "1.1";
+
+  namespace "urn:etsi:qkd:yang:etsi-qkd-sdn-connectivity";
+
+  prefix "qkdnw-conn";
+
+  import etsi-qkd-sdn-node { prefix "etsi-qkdn"; }
+  import etsi-qkd-node-types { prefix "etsi-qkdn-types"; }
+  import etsi-qkd-sdn-topology { prefix "qkdnw-tplg"; }
+
+  organization "ETSI ISG QKD";
+
+  contact
+    "https://www.etsi.org/committee/qkd
+    djcha@sktelecom.com";
+
+  description
+    "This module contains the groupings and containers composing the software-defined QKD network
+    connectivity service information models specified in ETSI GS QKD 018 V1.1.1";
+
+  revision 2022-02-22 {
+    description "Refinement of the YANG model to make it compatible with the ETSI ISG QKD 015 V2.1.1";
+  }
+
+  revision 2021-09-20 {
+    description "The YANG module for QKD network connectivity service.";
+  }
+
+  identity ACTION-RESULT {
+    description "Base identity from which a specific action result is derived.";
+  }
+  identity SUCCESS {
+    base ACTION-RESULT;
+    description "Action was successful.";
+  }
+  identity FAIL {
+    base ACTION-RESULT;
+    description "Action failed.";
+  }
+  typedef action-result {
+    type identityref {
+      base ACTION-RESULT;
+    }
+  }
+
+  grouping qkdn_id_ref {
+    leaf qkdn_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn/qkdnw-tplg:qkdn_id";
+      }
+      description "A reference to the SD-QKD node.";
+    }
+  }
+
+  grouping svc_link_id_ref {
+    leaf svc_link_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link/qkdnw-tplg:svc_link_id";
+      }
+      description "A reference to the QKD service link in QKD network topology.";
+    }
+  }
+
+  grouping svc_link_local_qkdn_ref {
+    leaf local_qkdn_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link[qkdnw-tplg:svc_link_id=current()/../svc_link_id_ref]/qkdnw-tplg:svc_link_local_qkdn/qkdnw-tplg:qkdn_id_ref";
+      }
+      description "A reference to the local SD-QKD node of the QKD service link in QKD network topology.";
+    }
+
+    leaf local_qkdi_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link[qkdnw-tplg:svc_link_id=current()/../svc_link_id_ref]/qkdnw-tplg:svc_link_local_qkdn/qkdnw-tplg:qkdi_id_ref";
+
+      }
+      description "A reference to the interface of the local SD-QKD node of the QKD service link in QKD network topology.";
+    }
+  }
+
+  grouping svc_link_remote_qkdn_ref {
+    leaf remote_qkdn_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link[qkdnw-tplg:svc_link_id=current()/../svc_link_id_ref]/qkdnw-tplg:svc_link_remote_qkdn/qkdnw-tplg:qkdn_id_ref";
+      }
+      description "A reference to the remote SD-QKD node of the QKD service link in QKD network topology.";
+    }
+
+    leaf remote_qkdi_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link[qkdnw-tplg:svc_link_id=current()/../svc_link_id_ref]/qkdnw-tplg:svc_link_remote_qkdn/qkdnw-tplg:qkdi_id_ref";
+      }
+      description "A reference to the interface of the remote SD-QKD node of the QKD service link in QKD network topology.";
+    }
+
+  }
+
+  grouping qkdn_qkdi_id_ref {
+    leaf qkdn_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn/qkdnw-tplg:qkdn_id";
+      }
+      description "Unique ID of the SD-QKD node.";
+    }
+
+    leaf qkdi_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn[qkdnw-tplg:qkdn_id=current()/../qkdn_id_ref]"+
+          "/qkdnw-tplg:qkd_interfaces/qkdnw-tplg:qkdi/qkdnw-tplg:qkdi_id";
+      }
+      description "Interface ID of the interface of the SD-QKD node.";
+    }
+  }
+
+  grouping svc_link_key_rate_perf {
+    leaf expected_consumption {
+        type uint32;
+        units "bps";
+        description "The bandwidth (in bits per second) of the external application that is consuming keys from QKD service link.";
+    }
+    
+    leaf skr {
+        type uint32;
+        units "bps";
+        description "Secret key generation rate (in bits per second) of QKD service link.";
+    }
+
+    leaf eskr {
+        type uint32;
+        units "bps";
+        description "Effective secret key generation rate (in bits per second) of QKD service link after the external application’s consumption.";
+    }
+  }
+
+  grouping phys_links_per_path {
+    leaf-list phys_links {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_phys_links/qkdnw-tplg:phys_link/qkdnw-tplg:phys_link_id";
+      }
+      min-elements 1;
+      ordered-by system;
+      description "A sequence of QKD physical links that constitute the specific key relay path.";
+    }
+  }
+
+  grouping app_id_ref {
+    leaf app_id_ref {
+      type leafref {
+        path "/qkdnw-conn:connectivity_service/qkdnw-conn:qkd_service/qkdnw-conn:qkd_app/qkdnw-conn:app_id";
+      }
+      description "A reference to a pair of applications extracting keys from a QKD key association link.";
+    }
+  }
+
+  grouping app_mapped_svc_link_id_ref {
+    leaf app_mapped_svc_link_id_ref {
+      type leafref {
+        path "/qkdnw-conn:connectivity_service/qkdnw-conn:qkd_service/qkdnw-conn:qkd_app[qkdnw-conn:app_id=current()/../app_id_ref]"+
+          "/qkdnw-conn:app_mapped_svc_link/qkdnw-conn:svc_link_and_qkdn_ids/qkdnw-conn:svc_link_id_ref";
+      }
+    }
+  }
+
+  grouping path_constraints {
+    container path_constraints {
+      description "Container for constraints when requesting candidate paths calculation.";
+
+      list include_nodes {
+        key "qkdn_id_ref qkdi_id_ref";
+        description "List of SD-QKD nodes and their interfaces to be included in candidate paths list
+          when SDQNC calculates candidate paths list.";
+
+        uses qkdn_qkdi_id_ref {
+          refine qkdn_id_ref {
+            description "Unique ID of the SD-QKD node to be included in candidate paths list.";
+          }
+          refine qkdi_id_ref {
+            description "Interface ID of the SD-QKD node to be included in candidate paths list.";
+          }
+        }
+      }
+
+      list exclude_nodes {
+        key "qkdn_id_ref qkdi_id_ref";
+        description "List of SD-QKD nodes and their interfaces to be excluded from candidate paths list
+          when SDQNC calculates candidate paths list.";
+
+        uses qkdn_qkdi_id_ref {
+          refine qkdn_id_ref {
+            description "Unique ID of the SD-QKD node to be excluded from candidate paths list.";
+          }
+          refine qkdi_id_ref {
+            description "Interface ID of the SD-QKD node to be excluded from candidate paths list.";
+          }
+        }
+      }
+    }
+  }
+
+  grouping candidate_paths {
+    container candidate_paths {
+      description "Container for key relay paths per QKD service link.";
+
+      leaf num_of_candidate_paths {
+        type uint32;
+        description "The number of candidate paths that SDQNC calculates and provides.";
+      }
+
+      list candidate_path {
+        key "path_id";
+        description "List of end-to-end key relay paths.
+          Each path consists of QKD physical links from the local SD-QKD node to the remote SD-QKD node.";
+
+        leaf path_id {
+          type uint32;
+          description "Priority of the specific path among candidate paths. This value is defined by SDQNC.";
+        }
+
+        uses phys_links_per_path;
+      }
+    }
+  }
+
+  grouping deploy_path {
+    container deploy_path {
+      description "Container for a path deployed among condidate paths.";
+
+      leaf path_id {
+        type uint32;
+        description "Identifier of a path deployed for QKD service link. This value is chosen by SDNO from the path ids
+          of candidate paths list after SDNO has received candidate paths list from SDQNC.";
+      }
+
+      uses phys_links_per_path;
+    }
+  }
+
+
+  container connectivity_service {
+    description "Container for external applications requesting QKD-derived keys and paths supporting QKD service link.";
+
+    container qkd_service {
+      description "Container for external applications requesting QKD-derived keys.";
+
+      list qkd_app {
+        key "app_id";
+        description "List of external applications requesting QKD-derived keys.";
+
+        uses etsi-qkdn:app_basic;
+        uses etsi-qkdn:app_details;
+        uses etsi-qkdn:app_time;
+        uses etsi-qkdn:app_statistics;
+        uses etsi-qkdn:app_qos;        
+
+        container app_mapped_svc_link {
+          description "Container for paths per QKD service link for a pair of applications.";
+
+          container svc_link_and_qkdn_ids {
+            uses svc_link_id_ref;
+            uses svc_link_local_qkdn_ref;
+            uses svc_link_remote_qkdn_ref;
+          }
+
+          uses path_constraints;
+          uses candidate_paths;
+          uses deploy_path;
+        }
+      }
+    }
+  }
+
+  rpc app-registration {
+    description "Request app registration to SDQNC.";
+    input {
+      uses app_id_ref;
+      uses etsi-qkdn:app_details;
+    }
+    output {
+      leaf response {
+        type action-result;
+      }
+    }
+  }
+
+  rpc create-service-link-id-for-app {
+    description "When an app requests service, SDNO or SDQNC assigns service link id for the app.";
+    input {
+      uses app_id_ref;
+      container local_qkdn {
+        uses qkdn_id_ref;
+      }
+      container remote_qkdn {
+        uses qkdn_id_ref;
+      }
+    }
+    output {
+      uses svc_link_id_ref;
+    }
+  }
+
+  rpc create-candidate-paths-per-service-link-for-app {
+    description "Create candidate paths per the QKD service link for app.";
+    input {
+      uses app_id_ref;
+      uses etsi-qkdn:app_qos;
+      uses app_mapped_svc_link_id_ref;
+      uses path_constraints;
+    }
+    output {
+      uses candidate_paths;
+    }
+  }
+
+  rpc update-candidate-paths-per-service-link-for-app {
+    description "SDNO can request this rpc repeatedly until it finally selects a path among candidate paths.";
+    input {
+      uses app_id_ref;
+      uses etsi-qkdn:app_qos;
+      uses app_mapped_svc_link_id_ref;
+      uses path_constraints;
+    }
+    output {
+      uses candidate_paths;
+    }
+  }
+
+  rpc deploy-a-candidate-path-per-service-link-for-app {
+    description "Deploy a SDNO-selected path per QKD service link for app.";
+    input {
+      uses app_id_ref;
+      uses app_mapped_svc_link_id_ref;
+      leaf path_id {
+        type uint32;
+      }
+    }
+    output {
+      leaf response {
+        type action-result;
+      }
+      uses deploy_path;
+    }
+  }
+
+  rpc delete-deployed-path-per-service-link-for-app {
+    description "Delete the deployed path per QKD service link for app in order to reserve key resources.";
+    input {
+      uses app_id_ref;
+      uses app_mapped_svc_link_id_ref;
+      leaf path_id {
+        type uint32;
+      }
+    }
+    output {
+      leaf response {
+        type action-result;
+      }
+      uses etsi-qkdn:app_time;
+    }
+  }
+
+  notification sdqkdn_application_new {
+    container qkd_application {
+      uses app_id_ref;
+      uses etsi-qkdn:app_details;
+    }
+  }
+
+  notification sdqkdn_application_deployed {
+    container qkd_application {
+      uses app_id_ref;
+      uses etsi-qkdn:app_details;
+      uses etsi-qkdn:app_qos;
+      uses app_mapped_svc_link_id_ref;
+    }
+  }
+
+  notification sdqkdn_application_qos_update {
+    container qkd_application {
+      uses app_id_ref;
+      uses etsi-qkdn:app_details;
+      uses etsi-qkdn:app_qos;
+    }
+  }
+
+  notification sdqkdn_application_disconnected {
+    container qkd_application {
+      uses app_id_ref;
+    }
+  }
+
+  notification alarm {
+    container application {
+      uses app_id_ref;
+      leaf status {
+        type etsi-qkdn-types:app-status-types;
+        description "Status of the app.";
+      }
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+  }
+
+  notification event {
+    container application {
+      uses app_id_ref;
+      leaf status {
+        type etsi-qkdn-types:app-status-types;
+        description "Status of the app.";
+      }
+
+      leaf message {
+        type string;
+        description "Message of an alarm.";
+      }
+
+      leaf severity {
+        type etsi-qkdn-types:severity-types;
+        description "Severity of an alarm.";
+      }
+    }
+  }
+}

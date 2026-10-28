@@ -1,0 +1,237 @@
+/* Copyright 2022 ETSI
+Licensed under the BSD-3 Clause (https://forge.etsi.org/legal-matters) */
+
+module etsi-qkd-sdn-topology {
+
+  yang-version "1.1";
+
+  namespace "urn:etsi:qkd:yang:etsi-qkd-sdn-topology";
+
+  prefix "qkdnw-tplg";
+  
+  import ietf-yang-types { prefix "yang"; }
+  import etsi-qkd-sdn-node { prefix "etsi-qkdn"; }
+  import etsi-qkd-node-types { prefix "etsi-qkdn-types"; }
+
+  organization "ETSI ISG QKD";
+
+  contact
+    "https://www.etsi.org/committee/qkd
+    djcha@sktelecom.com";
+
+  description
+    "This module contains the groupings and containers composing the software-defined QKD network 
+    topology information models specified in ETSI GS QKD 018 V1.1.1";
+  
+  revision 2022-02-22 {
+    description "Refinement of the YANG model to make it compatible with the ETSI ISG QKD 015 V2.1.1.";
+  }
+    
+  revision 2021-09-20 {
+    description "The YANG module for QKD network topology.";
+  }
+
+  grouping qkdn_id_ref {
+    leaf qkdn_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn/qkdnw-tplg:qkdn_id";
+      }
+      description "Used to reference a SD-QKD node.";
+    }
+  }
+
+  grouping qkdi_id_ref {
+    leaf qkdi_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:sdqkd_nodes/qkdnw-tplg:qkdn[qkdnw-tplg:qkdn_id=current()/../qkdn_id_ref]"+
+          "/qkdnw-tplg:qkd_interfaces/qkdnw-tplg:qkdi/qkdnw-tplg:qkdi_id";
+      }
+      description "Used to reference an interface of the SD-QKD node. Interfaces are identified to the SD-QKD node that contains them.";
+    }
+  }
+
+  grouping qkdn_qkdi_id_ref {    
+    uses qkdn_id_ref;
+    uses qkdi_id_ref;
+  }
+
+  grouping phys_link_id_ref {
+    leaf phys_link_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_phys_links/qkdnw-tplg:phys_link/qkdnw-tplg:phys_link_id";
+      }
+    }
+    description "Used to reference a QKD physical link.";
+  }
+
+  grouping svc_link_id_ref {
+    leaf svc_link_id_ref {
+      type leafref {
+        path "/qkdnw-tplg:qkd_network/qkdnw-tplg:qkd_links/qkdnw-tplg:qkd_svc_links/qkdnw-tplg:svc_link/qkdnw-tplg:svc_link_id";
+      }
+    }
+    description "Used to reference a QKD service link.";    
+  }
+
+  grouping qkd_interfaces {
+    container qkd_interfaces {
+      description "A set of the physical QKD modules of the SD-QKD node.";
+
+      list qkdi {
+        key "qkdi_id";
+        description "List of the physical QKD modules of the SD-QKD node.";
+
+        uses etsi-qkdn:qkdi_id;
+      }
+    }
+  }
+
+  grouping qkdn_list {
+    list qkdn {
+      key "qkdn_id";
+      description "List of SD-QKD nodes in QKD network.";
+
+
+      uses etsi-qkdn:qkdn_id {
+        refine qkdn_id {
+          description "Uniquely identifies a SD-QKD node within the containing QKD network.";
+        }
+      }
+       
+      uses qkd_interfaces;
+    }
+  }
+
+  grouping phys_link_local_qkdn {
+    container phys_link_local_qkdn {
+      description "Container for the local (source) SD-QKD node of the QKD physical link.";
+
+      uses qkdn_qkdi_id_ref {
+        refine qkdn_id_ref {
+          description "Uniquely identifies the local (source) SD-QKD node. Must be in the same topology.";
+        }
+        refine qkdi_id_ref {
+          description "Interface ID of the local (source) SD-QKD node that is connected to the QKD physical link.
+            This interface is located within the local SD-QKD node and terminates the QKD physical link.";
+        }
+      }            
+    }
+  }
+
+  grouping phys_link_remote_qkdn {
+    container phys_link_remote_qkdn {
+      description "Container for the remote (destination) SD-QKD node of the QKD physical link.";
+
+      uses qkdn_qkdi_id_ref {
+        refine qkdn_id_ref {
+          description "Uniquely identifies the remote (destination) SD-QKD node. Must be in the same topology.";
+        }
+        refine qkdi_id_ref {
+          description "Interface ID of the remote (destination) SD-QKD node that is connected to the QKD physical link.
+            This interface is located within the remote SD-QKD node and terminates the QKD physical link.";
+        }
+      } 
+    }
+  }
+
+  grouping phys_link_list {
+    list phys_link {
+      key "phys_link_id";
+      description "List of QKD physical links to directly connect SD-QKD nodes in QKD network.";
+
+      leaf phys_link_id {
+        type yang:uuid;
+        mandatory true;
+        description "Uniquely identifies a QKD physical link within the containing QKD network.";
+      }
+       
+      leaf link_type {
+        type etsi-qkdn-types:qkd-link-types;
+        description "QKD physical link type is included. The identity is PHYS.";
+      }
+
+      uses phys_link_local_qkdn;
+      uses phys_link_remote_qkdn;
+    }
+  }
+
+  grouping svc_link_local_qkdn {
+    container svc_link_local_qkdn {
+      description "Container for the local (source) SD-QKD node of the QKD service link.";
+
+      uses qkdn_qkdi_id_ref {
+        refine qkdn_id_ref {
+          description "Uniquely identifies the local (source) SD-QKD node.";
+        }
+        refine qkdi_id_ref {
+          description "Interface ID of the local (source) SD-QKD node that is connected to the QKD service link.
+            This interface is located within the local SD-QKD node and terminates the QKD service link.";
+        }
+      }
+    }
+  }
+
+  grouping svc_link_remote_qkdn { 
+    container svc_link_remote_qkdn {
+      description "Container holds the remote (destination) SD-QKD node of the QKD link.";
+
+      uses qkdn_qkdi_id_ref {
+        refine qkdn_id_ref {
+          description "Uniquely identifies the remote (destination) SD-QKD node.";
+        }
+        refine qkdi_id_ref {
+          description "Interface ID of the remote (destination) SD-QKD node that is connected to the QKD service link.
+            This interface is located within the remote SD-QKD node and terminates the QKD service link.";
+        }
+      }            
+    }
+  }
+
+  grouping svc_link_list {
+    list svc_link {
+      key "svc_link_id";
+      description "List of QKD service links (end-to-end key association links).";
+
+      leaf svc_link_id {
+        type yang:uuid;
+        mandatory true;
+        description "Uniquely identifies a QKD service link within the containing QKD network.";
+      }
+       
+      leaf link_type {
+        type etsi-qkdn-types:qkd-link-types;
+        description "QKD service link type is included. The identity is VIRT.";
+      }
+
+      uses svc_link_local_qkdn;
+      uses svc_link_remote_qkdn;
+    }
+  }
+
+
+  container qkd_network {
+    description "Container for a list of software-defined QKD (SD-QKD) nodes and QKD links in QKD network.";
+    
+    container sdqkd_nodes {
+      description "A set of SD-QKD nodes in QKD network.";
+
+      uses qkdn_list;
+     }
+
+    container qkd_links {
+      description "Container for both QKD physical links and service links.";
+
+      container qkd_phys_links {
+        description "A set of QKD physical links to directly connect SD-QKD nodes in QKD network";
+
+        uses phys_link_list;
+      }
+
+      container qkd_svc_links {
+        description "A set of QKD service links (end-to-end key association links).";
+
+        uses svc_link_list;
+      }
+    }
+  }
+}
