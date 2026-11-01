@@ -1,0 +1,18 @@
+% Figura: scenario di riferimento della GS QKD 018 (adattato da GS QKD 018, Fig. 1)
+% (estratta dalla figura del paper, senza ambiente figure)
+\begin{tikzpicture}
+  \node[box,fill=blue!8,minimum width=3.3cm] (orch) {SDN orchestrator};
+  \node[box,fill=green!8,minimum width=3.3cm,below left=12mm and 6mm of orch] (cq)
+       {SDN controller\\rete QKD};
+  \node[box,fill=orange!10,minimum width=3.3cm,below right=12mm and 6mm of orch] (co)
+       {SDN controller\\rete OTN};
+  \node[box,fill=green!4,below=10mm of cq,minimum width=4.6cm] (nq)
+       {nodi SD-QKD (agent, KME)};
+  \node[box,fill=orange!5,below=10mm of co,minimum width=4.6cm] (no)
+       {nodi OTN (SAE)};
+  \draw[<->,very thick,red!70!black] (orch) -- node[lbl]{GS QKD 018} (cq);
+  \draw[<->,thick] (orch) -- node[lbl]{NBI OTN (fuori scope)} (co);
+  \draw[<->,thick] (cq) -- node[lbl]{GS QKD 015} (nq);
+  \draw[<->,thick] (co) -- (no);
+  \draw[<->,dashed] (nq) -- node[lbl]{QKD 004 / 014} (no);
+\end{tikzpicture}

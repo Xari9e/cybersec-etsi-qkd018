@@ -1,0 +1,101 @@
+% =====================================================================
+%  Preambolo delle slide: tema Beamer classico (Warsaw), font, listati, TikZ
+% =====================================================================
+
+% ---------- Font e lingua / fonts and language ----------
+% pdfLaTeX: Latin Modern standard. XeLaTeX/LuaLaTeX: Cambria Math se presente.
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{lmodern}
+  \usepackage{amsmath,amssymb}
+\else
+  \usefonttheme{professionalfonts}
+  \usepackage{fontspec}
+  \usepackage{amsmath,amssymb}
+  \usepackage{unicode-math}
+  \IfFontExistsTF{Cambria Math}
+    {\setmathfont{Cambria Math}}
+    {\setmathfont{Latin Modern Math}}
+\fi
+\usepackage[italian]{babel}
+\usepackage{csquotes}
+
+% ---------- Tema classico ----------
+\usetheme{Warsaw}
+\setbeamertemplate{navigation symbols}{}
+% Piè di pagina diviso come nel tema, con il numero di slide a destra
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm plus1fill,rightskip=.3cm]{author in head/foot}%
+    \usebeamerfont{author in head/foot}\insertshortauthor
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.5\paperwidth,ht=2.5ex,dp=1.125ex,leftskip=.3cm,rightskip=.3cm]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle\hfill\insertframenumber{} / \inserttotalframenumber
+  \end{beamercolorbox}}%
+  \vskip0pt}
+
+% Indice all'inizio di ogni sezione
+\AtBeginSection[]{%
+  \begin{frame}<beamer>
+    \tableofcontents[currentsection,hideothersubsections]
+  \end{frame}}
+
+% ---------- Pacchetti ----------
+\usepackage{booktabs,tabularx,array}
+\usepackage{listings}
+\usepackage{adjustbox}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric,backgrounds}
+\usepackage[backend=biber,style=numeric-comp,sorting=none,maxbibnames=3,
+            url=false,doi=false,eprint=false,isbn=false]{biblatex}
+\addbibresource{bibliography/references.bib}
+\renewcommand*{\bibfont}{\scriptsize}
+\setbeamertemplate{bibliography item}{\insertbiblabel}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+% ---------- Listati (YANG, alberi pyang, HTTP) ----------
+\lstdefinelanguage{yang}{
+  morekeywords={module,namespace,prefix,import,organization,contact,
+    description,revision,reference,yang-version,identity,base,typedef,type,
+    identityref,grouping,uses,container,list,key,leaf,leaf-list,config,
+    augment,rpc,input,output,notification,leafref,path,default,units,
+    must,when,enum,enumeration,mandatory},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]"
+}
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  frame=single,
+  columns=fullflexible, keepspaces=true,
+  breaklines=true, upquote=true,
+  aboveskip=4pt, belowskip=4pt
+}
+
+% ---------- Stili TikZ comuni (come nel paper) ----------
+\tikzset{
+  >=Stealth,
+  box/.style={draw,rounded corners,minimum height=8mm,align=center,
+              font=\small},
+  lbl/.style={font=\scriptsize,midway,fill=white,inner sep=1pt},
+  actor/.style={draw,rounded corners,fill=gray!8,minimum width=2.4cm,
+                minimum height=7mm,align=center,font=\small},
+  msg/.style={->,thick},
+  ret/.style={->,dashed}
+}
+
+% Figura TikZ del paper adattata alla slide: \slidefig[altezza max]{file}
+\newcommand{\slidefig}[2][0.75\textheight]{%
+  \begin{center}
+    \begin{adjustbox}{max width=\textwidth,max totalheight=#1}
+      \input{figures/#2}
+    \end{adjustbox}
+  \end{center}}
+
+% Fonte in basso a destra
+\newcommand{\source}[1]{\vfill\hfill{\tiny #1}}
