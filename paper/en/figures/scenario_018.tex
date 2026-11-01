@@ -1,0 +1,25 @@
+% Figure: GS QKD 018 reference scenario (adapted from GS QKD 018, Fig. 1)
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+  \node[box,fill=blue!8,minimum width=3.3cm] (orch) {SDN orchestrator};
+  \node[box,fill=green!8,minimum width=3.3cm,below left=12mm and 6mm of orch] (cq)
+       {SDN controller\\QKD network};
+  \node[box,fill=orange!10,minimum width=3.3cm,below right=12mm and 6mm of orch] (co)
+       {SDN controller\\OTN};
+  \node[box,fill=green!4,below=10mm of cq,minimum width=4.6cm] (nq)
+       {SD-QKD nodes (agent, KME)};
+  \node[box,fill=orange!5,below=10mm of co,minimum width=4.6cm] (no)
+       {OTN nodes (SAE)};
+  \draw[<->,very thick,red!70!black] (orch) -- node[lbl]{GS QKD 018} (cq);
+  \draw[<->,thick] (orch) -- node[lbl]{OTN NBI (out of scope)} (co);
+  \draw[<->,thick] (cq) -- node[lbl]{GS QKD 015} (nq);
+  \draw[<->,thick] (co) -- (no);
+  \draw[<->,dashed] (nq) -- node[lbl]{QKD 004 / 014} (no);
+\end{tikzpicture}
+\caption{GS~QKD~018 reference scenario (adapted
+from~\cite[Fig.~1]{qkd018}). The standardised interface is in red; the
+dashed line is key delivery from KMEs to SAEs, which happens inside the
+same security perimeter.}
+\label{fig:scenario}
+\end{figure}

@@ -1,0 +1,178 @@
+% =====================================================================
+\subsection{ETSI GS QKD 002: i casi d'uso}
+\label{sec:qkd002}
+% =====================================================================
+
+La GS~QKD~002 V1.1.1 (giugno 2010)~\cite{qkd002} è il primo documento
+pubblicato dall'ISG QKD. Il suo obiettivo non è tecnico in senso stretto:
+prima di standardizzare \emph{come} realizzare la QKD, il gruppo voleva
+chiarire \emph{dove} serve, \emph{chi} la usa e \emph{quali requisiti}
+deve rispettare per entrare nelle infrastrutture esistenti. Il documento
+ragiona in tre passi: colloca la QKD tra le primitive crittografiche,
+individua i livelli dello stack di rete in cui può essere inserita e
+descrive sei casi d'uso con i relativi requisiti. Seguire questo
+ragionamento è utile perché mostra da dove nascono le esigenze che, dodici
+anni dopo, porteranno alle GS~QKD~015 e~018.
+
+\subsubsection{La QKD come primitiva crittografica}
+
+Il documento parte da un sistema QKD tipico: due unità, di solito montate
+in rack da 19", collegate da un canale quantistico in fibra o in spazio
+libero lungo fino a circa $100$~km, che producono alle due estremità la
+stessa sequenza di bit casuali. La clausola 4 chiarisce subito che questo
+risolve \emph{un solo} problema crittografico.
+
+Un sistema sicuro ha bisogno di tre primitive: \emph{cifratura},
+\emph{distribuzione delle chiavi} e \emph{autenticazione dei messaggi}. La
+QKD copre solo la seconda; per la cifratura servono one-time pad o cifrari
+simmetrici come AES, per l'autenticazione servono MAC (per esempio basati
+su hashing universale di tipo Wegman–Carter) o firme digitali. Ne segue che
+la QKD è un \emph{complemento} alla crittografia classica, non un suo
+sostituto, e che la sua sicurezza complessiva dipende anche dalle altre
+componenti del sistema. Il documento sottolinea inoltre che il canale
+pubblico della QKD va autenticato con un segreto pre-distribuito.
+
+\subsubsection{Dove si inserisce la QKD nello stack di rete}
+
+La clausola 6 descrive in quale livello dello stack una chiave QKD può
+essere consumata. La scelta del livello determina chi deve essere
+modificato e quanto l'integrazione è trasparente.
+
+\begin{description}[style=nextline,leftmargin=1.2em]
+  \item[Livello di collegamento (L2)] La chiave QKD alimenta lo scambio di
+        chiavi di PPP, le chiavi di IEEE~802.1AE (MACsec) oppure un
+        \emph{QKD link encryptor}, cioè un cifratore di linea che consuma
+        direttamente le chiavi prodotte dal link e crea un tunnel cifrato
+        tra due siti. È l'opzione più trasparente per le applicazioni.
+  \item[Livello di rete (L3)] Una versione modificata di IKE usa la chiave
+        QKD come segreto condiviso per IPsec.
+  \item[Livello di trasporto (L4)] La chiave QKD sostituisce le chiavi di
+        sessione di TLS/SSL o viene usata al posto degli HMAC per
+        l'autenticazione.
+  \item[Livello applicativo] Le applicazioni usano la chiave per
+        autenticare gli utenti o cifrare il contenuto scambiato tra le
+        proprie istanze.
+\end{description}
+
+Il punto concettuale è che, qualunque sia il livello, serve un componente
+che \emph{consuma} chiavi e uno che le \emph{fornisce}: è la separazione
+che più tardi diventerà SAE e KME, con un'interfaccia standard
+(GS~QKD~004 e~014) tra i due.
+
+\subsubsection{I sei casi d'uso}
+
+La clausola 7 descrive sei casi d'uso con una struttura fissa: obiettivo,
+descrizione, attori, benefici, considerazioni operative e di qualità del
+servizio. Li riassumiamo seguendo un filo logico: si passa dal
+collegamento singolo alla rete, e dalla rete privata alla rete di un
+operatore.
+
+\paragraph{UC1 – Offsite backup / business continuity.}
+Un'impresa replica i dati da un sito primario a un sito di backup
+(backup giornalieri, snapshot, mirroring di SAN, replica di database). Un
+singolo link QKD punto-punto alimenta un cifratore di linea su Ethernet o
+Fibre Channel; la fibra può essere dedicata (\emph{dark fibre}) o condivisa
+in WDM o TDM. I requisiti emersi sono: rinnovo della chiave tanto frequente
+quanto il tasso di generazione consente, gestione delle fasi di
+ricalibrazione durante trasferimenti continui, un segreto iniziale
+all'installazione e alta velocità di cifratura. Il documento nota che la
+sicurezza complessiva non è incondizionata, perché dipende anche dal
+cifratore.
+
+\paragraph{UC2 – Rete metropolitana aziendale.}
+Più sedi di un'impresa o di un ente pubblico sono collegate ai data
+center, attraverso i quali passa anche il traffico tra sedi. Ogni
+collegamento è protetto da un QKD link encryptor che cifra e autentica a
+livello~2, in modo trasparente per le applicazioni. Emergono due esigenze
+nuove: link diversi hanno volumi e tempi di traffico diversi, quindi
+\emph{requisiti di QoS diversi}, e i trasferimenti possono essere
+pianificati, periodici o attivati da soglie. La variante
+\emph{QKD Secured Key Server} prevede un server centrale che distribuisce
+chiavi e certificati ai client dell'area metropolitana su canali cifrati
+con one-time pad e autenticati con Wegman–Carter: è un primo esempio di
+servizio di chiavi offerto da una rete.
+
+\paragraph{UC3 – Controllo di infrastrutture critiche.}
+Il caso protegge il traffico SCADA di un'infrastruttura critica, con
+l'esempio di una rete ferroviaria: qui conta più l'\emph{autenticità} dei
+comandi (scambi, segnali) che la loro riservatezza. I nodi della WAN privata
+stanno in stazioni con perimetro controllato, mentre la fibra è fuori dal
+perimetro. Il documento propone due architetture: link QKD singoli tra
+nodi, con buffer e inoltro delle chiavi gestiti nei nodi, oppure una
+\emph{rete QKD con gestione delle chiavi integrata} e un'interfaccia
+dedicata verso le applicazioni. Si chiedono la massima disponibilità, con
+precauzioni per ricalibrazioni, guasti e denial of service, e la
+possibilità di inizializzare nuovi link ridondanti con segreti ottenuti
+lungo un cammino alternativo. È il primo caso in cui compaiono, insieme,
+key relay, gestione centralizzata e ridondanza dei cammini.
+
+\paragraph{UC4 – Protezione del backbone.}
+Una fibra del backbone metropolitano di un operatore, tipicamente un anello
+WDM con OADM o ROADM, trasporta un canale quantistico accanto ai canali
+dati. Le chiavi proteggono il traffico di controllo e gestione o vengono
+offerte ai clienti. Gli attori sono due: chi gestisce l'infrastruttura e
+chi offre servizi sopra di essa; i nodi del backbone sono fidati. I
+requisiti sono i più vicini a quelli di un operatore: il sistema QKD non
+deve ridurre il throughput del sistema WDM di oltre il $10\%$, deve essere
+compatibile con fibre, giunti e connettori comuni, la sua gestione deve
+\emph{integrarsi in quella del sistema WDM} e installazione e manutenzione
+devono essere possibili a personale senza competenze di fisica quantistica.
+
+\paragraph{UC5 – Rete di accesso ad alta sicurezza.}
+In una rete ottica passiva (PON) per Fiber-to-the-Home, il traffico verso
+gli utenti è trasmesso in broadcast a tutte le ONU, quindi va cifrato per
+impedire che un utente legga i dati di un altro. Un OLT serve da $32$ a
+$128$ ONU e il canale quantistico segue lo stesso percorso di quello
+classico. La configurazione è fortemente asimmetrica: un solo rivelatore
+all'OLT, più costoso, serve molte sorgenti alle ONU. Le distanze brevi
+permettono tassi elevati, necessari perché la capacità di generazione è
+condivisa tra tutti gli utenti. La variante \emph{QKD Authenticated Sensor
+Network} applica lo stesso schema a una stazione centrale con molti
+sensori e attuatori.
+
+\paragraph{UC6 – Servizi a lunga distanza (long-haul).}
+Due stazioni a terra $A$ e $B$ molto distanti, per esempio sulle due
+sponde di un oceano, vogliono condividere una chiave senza fidarsi di nodi
+intermedi a terra. Un nodo mobile $C$ (satellite, aereo o piattaforma ad
+alta quota) stabilisce un segreto $a$ con $A$ e poi un segreto $b$ con $B$,
+e invia a $B$ il valore $a\oplus b$ su canale classico; $B$ ricava $a$. È
+un key relay in cui il nodo fidato è $C$. I satelliti in orbita bassa
+operano a circa $300$–$800$~km di quota e passano sopra le stazioni circa
+una volta al giorno; l'orbita geostazionaria non è praticabile. Meteo e
+atmosfera possono ridurre o annullare il tasso, quindi servono canali
+ridondanti.
+
+La Tab.~\ref{tab:qkd002} riassume i sei casi.
+
+\begin{table}[h]
+\centering\small
+\caption{I casi d'uso della GS~QKD~002 e gli elementi che anticipano le
+specifiche successive.}
+\label{tab:qkd002}
+\begin{tabularx}{\textwidth}{@{}l L L@{}}
+\toprule
+\textbf{Caso} & \textbf{Configurazione} & \textbf{Esigenza che anticipa} \\
+\midrule
+UC1 Backup & link punto-punto + cifratore di linea & interfaccia chiave–cifratore \\
+UC2 Metro aziendale & più link, server di chiavi & QoS per applicazione \\
+UC3 Infrastrutture critiche & rete con key relay e gestione integrata & KMS, ridondanza, controllo centralizzato \\
+UC4 Backbone & canale quantistico in WDM & coesistenza con la rete ottica, gestione integrata \\
+UC5 Accesso PON & punto-multipunto & condivisione della capacità di chiave \\
+UC6 Long-haul & relay tramite nodo mobile & trusted node, ridondanza \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{Che cosa lascia in eredità}
+
+La GS~QKD~002 è un documento di prima edizione: la clausola sui requisiti
+generali e le caratteristiche funzionali dei singoli casi sono indicate
+come non ancora disponibili. Il suo valore sta nell'aver fissato le
+domande. Letti in sequenza, i casi d'uso mostrano che la QKD utile non è il
+singolo link ma una \emph{rete}, che richiede: un sistema di gestione delle
+chiavi che le memorizzi e le inoltri (UC3, UC6); un modo per esprimere
+requisiti di servizio diversi per applicazioni diverse (UC2); la convivenza
+con la rete ottica dell'operatore, con una gestione integrata in quella
+esistente e utilizzabile da personale non specializzato (UC4). Le prime due
+esigenze troveranno risposta nella GS~QKD~015, la terza, nella forma del
+coordinamento tra rete QKD e rete di trasporto, nella GS~QKD~018.

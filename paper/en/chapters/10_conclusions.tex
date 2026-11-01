@@ -1,0 +1,49 @@
+% =====================================================================
+\section{Limits and outlook}
+\label{sec:limiti}
+% =====================================================================
+
+\begin{itemize}
+  \item \textbf{Adoption.} 015 is used in real networks, 018 almost only in
+        testbeds and prototypes~\cite{madqci2024}.
+  \item \textbf{Incomplete multi-domain support.} The normative scenario is
+        QKD$+$OTN; the QKD$+$QKD case requires extensions like those of Sim
+        et al.\ and coordination with GS~QKD~020 for key hand-over between
+        KMSs.
+  \item \textbf{Metrics.} ESKR is an instantaneous indicator and accounts
+        neither for key already accumulated in buffers nor for its
+        dynamics. Laschet et al.~\cite{laschet2026} propose richer
+        indicators for path selection.
+  \item \textbf{Topology confidentiality.} Exposing the internal topology
+        to the orchestrator is acceptable within one operator, less so
+        between different operators; inter-domain routing schemes that
+        preserve confidentiality are needed~\cite{laschet2026,interconnect2026}.
+  \item \textbf{Interface security.} The standard does not specify how the
+        orchestrator–controller channel is protected, leaving it to
+        implementations.
+  \item \textbf{Algorithms.} Path computation is not standardised: this
+        helps innovation~\cite{routing2024,mendez2026} but makes behaviour
+        less predictable in multi-vendor scenarios.
+\end{itemize}
+
+% =====================================================================
+\section{Conclusions}
+\label{sec:conclusioni}
+% =====================================================================
+
+Read in sequence, ETSI's work on QKD control follows a clear logic.
+GS~QKD~002 showed that useful QKD is a network, with key management,
+differentiated service requirements and integration into the operator's
+optical network. GS~QKD~015 answered with the SD-QKD node abstraction:
+modules as interfaces, a single key manager, physical and virtual links,
+applications with QoS, and a controller that registers, plans and
+configures, all described in YANG. GS~QKD~018 added the orchestration
+layer: each domain becomes an abstract graph, key resources are monitored
+through the inventory and provisioning follows a scheme in which the
+controller proposes and the orchestrator decides. The design mirrors ACTN,
+reuses YANG, NETCONF and RESTCONF and keeps the essential security
+principle: keys never leave the nodes. The KOREN, Politecnico di Milano and
+MadQCI experiences show that the scheme works but that QKD orchestration is
+still young. The next step is to truly extend it to multi-operator
+settings, with better metrics and confidentiality guarantees between
+domains.

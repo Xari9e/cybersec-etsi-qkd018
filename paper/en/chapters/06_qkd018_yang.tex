@@ -1,0 +1,132 @@
+% =====================================================================
+\subsection{The YANG modules}
+\label{sec:yang018}
+% =====================================================================
+
+Annex~A (normative) turns the model into three YANG~1.1 modules, published
+on ETSI Forge~\cite{qkd018yang}. With the constructs seen in
+§\ref{sec:yang-anatomia} their structure is quick to read. The modules
+import \texttt{etsi-qkd-sdn-node} and \texttt{etsi-qkd-node-types} from
+GS~QKD~015 to reuse their types (identifiers, link types, application QoS):
+018 does not reinvent the node, it provides an abstract view of it. The
+three modules form a chain: \emph{topology} (the skeleton) $\to$
+\emph{inventory} (what is there and in which state) $\to$
+\emph{connectivity} (what is done with it).
+
+\paragraph{\texttt{etsi-qkd-sdn-topology} (prefix \texttt{qkdnw-tplg}).}
+It describes only the structure, i.e.\ who is connected to whom:
+\begin{lstlisting}
+qkd_network
+ +-- sdqkd_nodes
+ |    +-- qkdn* [qkdn_id]                          SD-QKD nodes
+ |         +-- qkd_interfaces/qkdi* [qkdi_id]      QKD modules
+ +-- qkd_links
+      +-- qkd_phys_links/phys_link* [phys_link_id]  physical links
+      |    +-- link_type
+      |    +-- phys_link_local_qkdn   (qkdn_id_ref, qkdi_id_ref)
+      |    +-- phys_link_remote_qkdn  (qkdn_id_ref, qkdi_id_ref)
+      +-- qkd_svc_links/svc_link* [svc_link_id]     service links
+           +-- ... local/remote endpoints as above
+\end{lstlisting}
+Compared with 015 the point of view changes: there is no longer a tree per
+node, but a single tree for the whole network of the domain. Abstractly it
+is a graph $G=(V,E)$ with $V$ the set of \texttt{qkdn} nodes and
+$E = E_{\text{phys}}\cup E_{\text{svc}}$, where \texttt{phys\_link}s
+represent physical adjacencies and \texttt{svc\_link}s logical key
+relations, possibly multi-hop. Endpoints are \texttt{leafref}s, i.e.\
+validated references to existing nodes and interfaces. Given the graph
+$G_i$ of each domain $i$, the orchestrator composes a multi-domain view
+\begin{equation}
+  G = \Big(\bigcup_i V_i,\; \bigcup_i E_i \,\cup\, E_{\text{inter}}\Big),
+\end{equation}
+where $E_{\text{inter}}$ are the adjacencies between domains, typically
+realised by shared border nodes.
+
+\paragraph{\texttt{etsi-qkd-sdn-inventory} (prefix \texttt{qkdnw-invt}).}
+It does not create a new tree but \texttt{augment}s the topology tree,
+adding leaves to elements already defined (Table~\ref{tab:inventory}). It
+is a textbook use of \texttt{augment}: those interested only in the
+structure implement the topology, those who also want the state add the
+inventory without duplicating anything.
+
+\begin{table}[h]
+\centering\small
+\caption{Elements added by the inventory module to the topology tree.}
+\label{tab:inventory}
+\begin{tabularx}{\textwidth}{@{}l L@{}}
+\toprule
+\textbf{Element} & \textbf{Added leaves} \\
+\midrule
+\texttt{qkdn} & version, capabilities, location, KME IP address and port
+(where SAEs fetch keys via QKD~014), status \\
+\texttt{qkdi} & supported role, model, type, attachment point, status \\
+\texttt{phys\_link} & \texttt{enable} (configurable), \texttt{wavelength},
+\texttt{performance} (\texttt{skr}, \texttt{eskr},
+\texttt{expected\_consumption}, QBER, SNR), status \\
+\texttt{svc\_link} & \texttt{bandwidth}, \texttt{performance},
+\texttt{path\_restoration} (\texttt{AUTOMATIC}/\texttt{MANUAL},
+\texttt{hold\_off\_time} in ms), status \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The module also defines the notifications that implement the reactive part
+of §5.5: \texttt{sdqkdn\_new}, \texttt{sdqkdn\_interface\_new},
+\texttt{sdqkdn\_phys\_link\_new}, \texttt{sdqkdn\_svc\_link\_new}, the
+\texttt{\_perf\_update} and \texttt{\_overloaded} variants and the generic
+\texttt{alarm} and \texttt{event}. The \texttt{eskr} field of the links is
+what tells the orchestrator whether a path can carry a new service,
+according to~\eqref{eq:admissible}.
+
+\paragraph{\texttt{etsi-qkd-sdn-connectivity} (prefix \texttt{qkdnw-conn}).}
+This is the operational module: it manages applications and the paths that
+serve them.
+\begin{lstlisting}
+connectivity_service/qkd_service/qkd_app* [app_id]
+ +-- (application data from QKD 015: status, type, QoS, statistics)
+ +-- app_mapped_svc_link
+      +-- svc_link_and_qkdn_ids   service link and endpoints
+      +-- path_constraints        include_nodes / exclude_nodes
+      +-- candidate_paths         num_of_candidate_paths + list of paths
+      +-- deploy_path             chosen path_id
+\end{lstlisting}
+Here the \texttt{rpc}s appear, mirroring the provisioning workflow step by
+step:
+\begin{description}[font=\normalfont\ttfamily\footnotesize,style=nextline,leftmargin=1.2em]
+  \item[app-registration] registers the application in the domain;
+  \item[create-service-link-id-for-app] creates the service link between
+        local and remote node;
+  \item[create-candidate-paths-per-service-link-for-app] the controller
+        computes candidate paths honouring QoS and the
+        \texttt{include\_nodes}/\texttt{exclude\_nodes} constraints;
+  \item[update-candidate-paths-per-service-link-for-app] recomputation with
+        different constraints;
+  \item[deploy-a-candidate-path-per-service-link-for-app] the orchestrator
+        picks a \texttt{path\_id} and the controller activates it;
+  \item[delete-deployed-path-per-service-link-for-app] releases the path.
+\end{description}
+The module's notifications are \texttt{sdqkdn\_application\_new},
+\texttt{sdqkdn\_application\_deployed},
+\texttt{sdqkdn\_application\_qos\_update} and
+\texttt{sdqkdn\_application\_disconnected}.
+
+The conceptual point is the \textbf{division of roles}: the controller
+knows its own domain and \emph{proposes} paths, the orchestrator has the
+overall view and \emph{decides}. Table~\ref{tab:moduli} sums up.
+
+\begin{table}[h]
+\centering\small
+\caption{The three YANG modules of GS~QKD~018.}
+\label{tab:moduli}
+\begin{tabularx}{\textwidth}{@{}l L l L@{}}
+\toprule
+\textbf{Module} & \textbf{Question} & \textbf{Clause} & \textbf{Data} \\
+\midrule
+topology & What does the network look like? & §5.1 & structure (graph) \\
+inventory & How many resources, in which state? & §5.2, §5.5 &
+status, performance, configuration, notifications \\
+connectivity & How do I serve an application end to end? & §5.3, §5.4, §6.2 &
+applications, path computation and deployment RPCs \\
+\bottomrule
+\end{tabularx}
+\end{table}

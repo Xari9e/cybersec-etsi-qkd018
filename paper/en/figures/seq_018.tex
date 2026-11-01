@@ -1,0 +1,30 @@
+% Figure: end-to-end QKD + OTN provisioning (adapted from GS QKD 018, Fig. 2)
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+  \def\xA{0}\def\xB{4.0}\def\xC{8.4}\def\xD{12.2}
+  \node[actor] at (\xA,0) {Administrator};
+  \node[actor] at (\xB,0) {Orchestrator};
+  \node[actor,fill=green!8] at (\xC,0) {QKD controller};
+  \node[actor,fill=orange!10] at (\xD,0) {OTN controller};
+  \foreach \x in {\xA,\xB,\xC,\xD} \draw[gray] (\x,-0.4) -- (\x,-9.0);
+  \draw[msg] (\xA,-1.0) -- node[above]{service request (SAE, QoS)} (\xB,-1.0);
+  \draw[msg] (\xB,-1.5) -- ++(0.4,0) -- ++(0,-0.4) -- (\xB,-1.9);
+  \node[right,align=left] at (\xB+0.45,-1.7) {address matching\\OTN node $\leftrightarrow$ QKD node};
+  \draw[blue!60,rounded corners] (\xB-0.3,-2.55) rectangle (\xC+0.3,-3.85);
+  \node[blue!60,anchor=south west,font=\scriptsize\itshape] at (\xB-0.3,-2.55) {repeatable loop};
+  \draw[msg] (\xB,-3.0) -- node[above]{service link creation + constraints} (\xC,-3.0);
+  \draw[ret] (\xC,-3.6) -- node[above]{\texttt{svc\_link\_id}, candidate paths} (\xB,-3.6);
+  \draw[msg] (\xB,-4.6) -- node[above]{deploy chosen path (\texttt{path\_id})} (\xC,-4.6);
+  \draw[msg] (\xC,-5.0) -- ++(0.4,0) -- ++(0,-0.4) -- (\xC,-5.4);
+  \node[right,align=left] at (\xC+0.45,-5.2) {key relay along\\the path};
+  \draw[ret] (\xC,-6.1) -- node[above]{keys ready} (\xB,-6.1);
+  \draw[msg] (\xB,-6.9) -- node[above]{application provisioning (\texttt{qkd\_app})} (\xC,-6.9);
+  \draw[ret] (\xC,-7.6) -- node[above]{\texttt{sdqkdn\_application\_deployed}} (\xB,-7.6);
+  \draw[msg] (\xB,-8.6) -- node[above,fill=white,inner sep=1pt]{OTN nodes may fetch keys from the QKD nodes} (\xD,-8.6);
+\end{tikzpicture}
+\caption{End-to-end provisioning of a QKD service across a QKD network and
+an OTN (simplified from~\cite[Fig.~2]{qkd018}). The interaction with the
+OTN controller is out of the scope of the specification.}
+\label{fig:seq018}
+\end{figure}

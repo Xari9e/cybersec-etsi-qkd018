@@ -1,0 +1,74 @@
+% =====================================================================
+\subsection{Multi-domain provisioning workflow}
+\label{sec:workflow}
+% =====================================================================
+
+Clause 6 ties the information to the service life cycle. When the QKD
+network is introduced, the orchestrator acquires its topology (§5.1);
+during operation it receives status and inventory, on demand or
+periodically (§5.2); after a service is activated it monitors its status
+(§5.3); at any time it receives notifications (§5.5).
+
+§6.2 describes the complete case (Fig.~\ref{fig:seq018}): an orchestrator
+coordinates the QKD controller and the OTN controller, which do not talk to
+each other directly.
+
+\input{figures/seq_018}
+
+The steps are:
+\begin{enumerate}
+  \item the administrator requests a service from the orchestrator,
+        specifying the SAEs in the OTN nodes and their QoS;
+  \item the orchestrator identifies the controllers involved and performs
+        address matching; it already knows the addresses of the QKD nodes
+        thanks to topology and inventory;
+  \item it asks the QKD controller to create a service link and compute
+        paths, with the desired constraints;
+  \item the controller assigns an \texttt{svc\_link\_id} and returns the
+        candidate paths, each with a priority; this step may be repeated
+        with different constraints;
+  \item the orchestrator picks a path and requests its deployment; the
+        nodes generate and relay keys along the path until both ends are
+        ready;
+  \item once confirmed, the orchestrator requests provisioning of the
+        application on the service link and tells the OTN controller that
+        the OTN nodes may start fetching keys from the designated QKD
+        nodes.
+\end{enumerate}
+Note the parallel with the virtual-link workflow of 015: there the
+controller computed and configured the path on its own, here it
+\emph{proposes} it and waits for the orchestrator's choice. With several
+QKD domains the orchestrator repeats steps 3–5 for each domain along the
+chosen inter-domain path, joining the segments through border nodes: this
+is what Sim et al.\ do (§\ref{sec:sim}).
+
+% =====================================================================
+\subsection{Protocols and security}
+\label{sec:protocolli}
+% =====================================================================
+
+\paragraph{Transport (§8).}
+Like 015, the standard separates the data model (YANG~1.1) from the
+transport protocol, which can be NETCONF~\cite{rfc6241} or
+RESTCONF~\cite{rfc8040}. With RESTCONF every resource is a URI, reads use
+\texttt{GET} and configuration uses \texttt{POST}, \texttt{PUT},
+\texttt{PATCH} and \texttt{DELETE}, with XML or JSON encoding;
+notifications are received by subscribing to the corresponding streams.
+The standard notes that the stateless REST paradigm suits this kind of API.
+As an example, reading the topology and invoking an RPC would look like:
+\begin{lstlisting}
+GET  /restconf/data/etsi-qkd-sdn-topology:qkd_network
+POST /restconf/operations/etsi-qkd-sdn-connectivity:create-service-link-id-for-app
+\end{lstlisting}
+
+\paragraph{Security (§7).}
+The controller has a central view of the network and passes a subset of it
+to the orchestrator; protection measures for the interface (authentication,
+channel encryption, e.g.\ TLS under RESTCONF) are left to implementations.
+The fundamental principle, inherited from GS~QKD~015, is that
+\textbf{QKD-derived keys never pass through either the controller or the
+orchestrator}: the YANG modules contain only key rates and the KME address.
+A compromised orchestrator can therefore cause service disruption (wrong
+paths, exhausted resources, denial of service) but cannot read keys. The
+standard recommends careful design, installation and personalisation
+procedures to mitigate malicious requests and attacks on control channels.

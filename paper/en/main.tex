@@ -1,0 +1,52 @@
+% =====================================================================
+%  ETSI GS QKD 018: SDN orchestration of multi-domain QKD networks
+%  ---------------------------------------------------------------------
+%  BUILD (XeLaTeX or LuaLaTeX, NOT pdfLaTeX):
+%      latexmk -xelatex main.tex
+%  or, by hand:
+%      xelatex main.tex ; biber main ; xelatex main.tex ; xelatex main.tex
+%  The math font is Cambria Math (unicode-math, \setmathfont), shipped
+%  with Windows and Microsoft Office. If it is missing (e.g. on
+%  Overleaf) Latin Modern Math is used automatically.
+%  On Overleaf: Menu -> Compiler -> XeLaTeX.
+%
+%  Project layout:
+%      main.tex           main document
+%      preamble.tex       packages, fonts, environments
+%      abstract/          abstract
+%      chapters/          one file per section
+%      figures/           TikZ figures
+%      bibliography/      references.bib
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+\input{preamble}
+
+\title{\textbf{SDN Orchestration of Multi-Domain QKD Networks:\\
+       the ETSI GS QKD 018 Interface}}
+\author{Diego Carro}
+\author{Bucci Felice Elia}
+\affil{Cybersecurity course, Politecnico di Torino\\Quantum Engineering}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\input{abstract/abstract}
+
+\tableofcontents
+\bigskip
+
+\input{chapters/01_state_of_the_art}
+\input{chapters/02_introduction}
+\input{chapters/03_qkd002}
+\input{chapters/04_qkd015}
+\input{chapters/05_qkd018}
+\input{chapters/06_qkd018_yang}
+\input{chapters/07_qkd018_workflow}
+\input{chapters/08_actn}
+\input{chapters/09_real_deployments}
+\input{chapters/10_conclusions}
+
+\printbibliography[heading=bibintoc,title={References}]
+
+\end{document}

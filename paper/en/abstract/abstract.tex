@@ -1,0 +1,31 @@
+% =====================================================================
+%  Abstract
+% =====================================================================
+\begin{abstract}
+\noindent
+Quantum key distribution (QKD) lets two parties agree on a secret key whose
+security rests on the laws of physics rather than on computational
+hardness. Moving it from the laboratory into an operator's network,
+however, means managing it like any other network resource: discovering its
+topology, monitoring its state, allocating its capacity to services and
+coordinating it with classical networks. The ETSI ISG QKD addressed this
+problem step by step. GS~QKD~002 identifies the use cases and integration
+requirements; GS~QKD~015 defines the model through which an SDN controller
+sees and configures the QKD nodes of a domain; GS~QKD~018 defines the
+interface between an \emph{SDN orchestrator} and the controller of a QKD
+domain, enabling end-to-end provisioning across several domains and
+between a QKD network and an optical transport network. This work follows
+that chain in a reasoned way: it describes the components of an SD-QKD
+network and the structure of a YANG model, analyses GS~QKD~018 in detail
+(use cases, information model, topology, inventory and connectivity
+modules, multi-domain workflow, security), shows its analogy with the IETF
+ACTN framework (RFC~8453) and compares it with three real experiences: SK
+Telecom's multi-vendor KOREN testbed, an ONOS-based hierarchical prototype
+developed at Politecnico di Milano, and the MadQCI network in Madrid. It
+closes with the current limits of the standard and open research
+directions.
+
+\medskip
+\noindent\textbf{Keywords:} QKD, SDN, orchestration, ETSI GS QKD 015,
+ETSI GS QKD 018, YANG, RESTCONF, multi-domain, key management.
+\end{abstract}

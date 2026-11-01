@@ -1,0 +1,52 @@
+% =====================================================================
+%  ETSI GS QKD 018: orchestrazione SDN di reti QKD multi-dominio
+%  ---------------------------------------------------------------------
+%  COMPILAZIONE (XeLaTeX o LuaLaTeX, NON pdfLaTeX):
+%      latexmk -xelatex main.tex
+%  oppure, a mano:
+%      xelatex main.tex ; biber main ; xelatex main.tex ; xelatex main.tex
+%  Il font matematico e' Cambria Math (unicode-math, \setmathfont),
+%  installato di default su Windows e con Microsoft Office. Se manca
+%  (per esempio su Overleaf) si usa automaticamente Latin Modern Math.
+%  Su Overleaf: Menu -> Compiler -> XeLaTeX.
+%
+%  Struttura del progetto:
+%      main.tex           documento principale
+%      preamble.tex       pacchetti, font, ambienti
+%      abstract/          abstract
+%      chapters/          un file per sezione
+%      figures/           figure TikZ
+%      bibliography/      references.bib
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+\input{preamble}
+
+\title{\textbf{Orchestrazione SDN di reti QKD multi-dominio:\\
+       l'interfaccia ETSI GS QKD 018}}
+\author{Diego Carro}
+\author{Bucci Felice Elia}
+\affil{Corso di Cybersecurity, Politecnico di Torino\\Quantum Engineering}
+\date{Novembre 2026}
+
+\begin{document}
+\maketitle
+
+\input{abstract/abstract}
+
+\tableofcontents
+\bigskip
+
+\input{chapters/01_stato_arte}
+\input{chapters/02_introduzione}
+\input{chapters/03_qkd002}
+\input{chapters/04_qkd015}
+\input{chapters/05_qkd018}
+\input{chapters/06_qkd018_yang}
+\input{chapters/07_qkd018_workflow}
+\input{chapters/08_actn}
+\input{chapters/09_casi_reali}
+\input{chapters/10_conclusioni}
+
+\printbibliography[heading=bibintoc,title={Bibliografia}]
+
+\end{document}

@@ -1,0 +1,53 @@
+% =====================================================================
+\section{Real deployments}
+\label{sec:casi}
+% =====================================================================
+
+\subsection{SK Telecom: multi-vendor orchestration on KOREN}
+\label{sec:sim}
+
+Sim et al.~\cite{sim2023} describe the first documented commercial
+deployment of a GS~QKD~018-compliant orchestrator, on the testbed of the
+Korean research network KOREN (2020–2022). Two QKD operators run two
+networks with devices and KMSs from different vendors, each with its own
+controller (QKDNC); an orchestrator (QKDNO) coordinates them. Links use
+decoy-state BB84 over spans between $39$ and $100$~km. The two networks meet
+at \emph{border nodes} (e.g.\ Pangyo and Daejeon) that contain no QKD
+modules but two interconnected KMSs, one per operator.
+
+When two SAEs belong to different networks, the orchestrator computes the
+end-to-end path with a \emph{path computation engine}, choosing \emph{in
+advance} the border node to traverse; each controller then creates its own
+service-link segment. To bind the segments the authors extend the model:
+they introduce a \emph{multi-segment} application type (\texttt{MS}), with
+an identifier \texttt{ms\_app\_id} shared across domains and
+\texttt{server\_ms\_info} and \texttt{client\_ms\_info} describing the
+external KMSs, plus an \texttt{app-registration-ms} RPC. Key transfer at
+the border node uses the KMS–KMS interface of GS~QKD~020~\cite{qkd020}.
+The case shows both the soundness of the 018 scheme and one of its limits:
+the application types inherited from 015 (\texttt{CLIENT} and
+\texttt{INTERNAL}) are not enough for multi-domain, and extensions are
+needed. It is also a good illustration of the usefulness of the YANG
+\texttt{identity} construct discussed in §\ref{sec:yang-anatomia}: a new
+type can be added without rewriting the original model.
+
+\subsection{Politecnico di Milano: hierarchical control with ONOS}
+
+Vicario's thesis~\cite{vicario2025} builds an end-to-end prototype of
+hierarchical control for metropolitan networks: the domain controllers are
+based on ONOS and manage the nodes through the GS~QKD~015 model, while the
+upward interface is GS~QKD~018, exposed via RESTCONF to a Python
+orchestrator that aggregates the topology of several domains. It is a
+useful implementation because it shows the whole 015~$\to$~018 stack in
+open software, with the same YANG modules described in §\ref{sec:yang018}.
+
+\subsection{MadQCI: the Madrid network}
+
+MadQCI~\cite{madqci2024} is a real QKD network in Madrid with dozens of
+modules from different vendors over more than $130$~km, integrated with the
+production optical network. Control relies on an SD-QKD stack based on
+GS~QKD~015, which is confirmed as the most widely adopted standard.
+GS~QKD~018 is mentioned as a tool for inter-domain orchestration and
+optical–quantum coordination, but the authors describe it as work still in
+progress. This is an honest picture of the state of the art: domain control
+is mature, orchestration much less so.

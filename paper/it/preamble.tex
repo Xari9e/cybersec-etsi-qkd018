@@ -1,0 +1,92 @@
+% =====================================================================
+%  Preambolo: pacchetti, font, ambienti e stili
+% =====================================================================
+
+% ---------- Font e lingua (richiede XeLaTeX o LuaLaTeX) ----------
+\usepackage{fontspec}
+\usepackage{amsmath,amssymb}
+\usepackage{amsthm}
+\usepackage{unicode-math}
+\usepackage[italian]{babel}
+\usepackage{csquotes}
+\addto\captionsitalian{\renewcommand{\abstractname}{Abstract}}
+
+% Cambria Math per gli ambienti matematici; fallback se non installato
+\IfFontExistsTF{Cambria Math}
+  {\setmathfont{Cambria Math}}
+  {\setmathfont{Latin Modern Math}}
+% Per avere anche il testo in Cambria, decommentare:
+% \IfFontExistsTF{Cambria}{\setmainfont{Cambria}}{}
+
+% ---------- Impaginazione ----------
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs,tabularx,array,longtable}
+\usepackage{enumitem}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric,backgrounds}
+\usepackage{authblk}
+
+% ---------- Bibliografia ----------
+\usepackage[backend=biber,style=numeric-comp,sorting=none,maxbibnames=6]{biblatex}
+\addbibresource{bibliography/references.bib}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{3pt}
+\setlength{\emergencystretch}{2em}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+% a capo consentito dopo il trattino basso negli identificatori \texttt
+\AtBeginDocument{\renewcommand{\_}{\textunderscore\allowbreak}}
+
+% ---------- Ambiente "definition" ----------
+\theoremstyle{definition}
+\newtheorem{definition}{Definizione}[section]
+
+% ---------- Listati (YANG, alberi pyang, JSON, HTTP) ----------
+\definecolor{codebg}{gray}{0.96}
+\definecolor{codekw}{RGB}{0,70,140}
+\definecolor{codecm}{RGB}{110,110,110}
+\definecolor{codestr}{RGB}{150,40,40}
+\lstdefinelanguage{yang}{
+  morekeywords={module,namespace,prefix,import,organization,contact,
+    description,revision,reference,yang-version,identity,base,typedef,type,
+    identityref,grouping,uses,container,list,key,leaf,leaf-list,config,
+    augment,rpc,input,output,notification,leafref,path,default,units,
+    must,when,enum,enumeration,mandatory},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]"
+}
+\lstdefinestyle{code}{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecm}\itshape,
+  stringstyle=\color{codestr},
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0pt,
+  columns=fullflexible, keepspaces=true,
+  xleftmargin=4pt, xrightmargin=4pt,
+  breaklines=true, upquote=true,
+  aboveskip=6pt, belowskip=6pt
+}
+\lstset{style=code}
+\renewcommand{\lstlistingname}{Listato}
+
+% ---------- Stili TikZ comuni ----------
+\tikzset{
+  >=Stealth,
+  box/.style={draw,rounded corners,minimum height=8mm,align=center,
+              font=\small},
+  lbl/.style={font=\scriptsize,midway,fill=white,inner sep=1pt},
+  actor/.style={draw,rounded corners,fill=gray!8,minimum width=2.4cm,
+                minimum height=7mm,align=center,font=\small},
+  msg/.style={->,thick},
+  ret/.style={->,dashed}
+}

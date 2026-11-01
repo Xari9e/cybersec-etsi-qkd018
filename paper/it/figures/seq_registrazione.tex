@@ -1,0 +1,29 @@
+% Figura: registrazione di un'applicazione (adattata da GS QKD 015, Fig. 2)
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\scriptsize]
+  \def\xA{0}\def\xB{3.0}\def\xC{6.6}\def\xD{10.2}\def\xE{13.2}
+  \node[actor,minimum width=2cm] at (\xA,0) {App A};
+  \node[actor,minimum width=2cm,fill=green!8] at (\xB,0) {Nodo A};
+  \node[actor,minimum width=2cm,fill=blue!8] at (\xC,0) {Controller};
+  \node[actor,minimum width=2cm,fill=green!8] at (\xD,0) {Nodo B};
+  \node[actor,minimum width=2cm] at (\xE,0) {App B};
+  \foreach \x in {\xA,\xB,\xC,\xD,\xE} \draw[gray] (\x,-0.4) -- (\x,-6.6);
+  \draw[msg] (\xA,-0.9) -- node[above]{ID, ID peer, QoS} (\xB,-0.9);
+  \draw[msg] (\xB,-1.5) -- node[above]{\texttt{sdqkdn\_application\_new}} (\xC,-1.5);
+  \draw[ret] (\xC,-2.1) -- node[above]{ack (peer ignoto)} (\xB,-2.1);
+  \draw[msg] (\xE,-2.9) -- node[above]{ID, ID peer, QoS} (\xD,-2.9);
+  \draw[msg] (\xD,-3.5) -- node[above]{\texttt{sdqkdn\_application\_new}} (\xC,-3.5);
+  \draw[msg] (\xC,-4.1) -- ++(0.35,0) -- ++(0,-0.35) -- (\xC,-4.45);
+  \node[right] at (\xC+0.4,-4.27) {abbina e crea \texttt{app\_id}};
+  \draw[msg] (\xC,-5.1) -- node[above]{config.\ (\texttt{app\_id}, QoS)} (\xB,-5.1);
+  \draw[msg] (\xC,-5.1) -- node[above]{config.\ (\texttt{app\_id}, QoS)} (\xD,-5.1);
+  \draw[ret] (\xB,-5.9) -- node[above]{\texttt{app\_id}} (\xA,-5.9);
+  \draw[ret] (\xD,-5.9) -- node[above]{\texttt{app\_id}} (\xE,-5.9);
+\end{tikzpicture}
+\caption{Registrazione di un'applicazione in una rete SD-QKD. Le
+applicazioni conoscono solo il proprio key manager; è il controller ad
+abbinare le due richieste e a creare l'identificativo di servizio.
+Adattata da~\cite[Fig.~2]{qkd015}.}
+\label{fig:seq015}
+\end{figure}

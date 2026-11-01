@@ -1,0 +1,75 @@
+% =====================================================================
+\subsection{Workflow di provisioning multi-dominio}
+\label{sec:workflow}
+% =====================================================================
+
+La clausola 6 lega le informazioni al ciclo di vita del servizio. Quando la
+rete QKD viene introdotta, l'orchestrator ne acquisisce la topologia
+(§5.1); durante l'esercizio riceve, su richiesta o periodicamente, stato e
+inventario (§5.2); dopo l'attivazione di un servizio ne monitora lo stato
+(§5.3); in ogni momento riceve notifiche (§5.5).
+
+La §6.2 descrive il caso completo (Fig.~\ref{fig:seq018}): un orchestrator
+coordina il controller QKD e il controller OTN, che non comunicano tra loro
+direttamente.
+
+\input{figures/seq_018}
+
+I passi sono:
+\begin{enumerate}
+  \item l'amministratore chiede all'orchestrator un servizio, indicando i
+        SAE nei nodi OTN e la loro QoS;
+  \item l'orchestrator individua i controller coinvolti ed effettua
+        l'address matching; conosce già gli indirizzi dei nodi QKD grazie
+        a topologia e inventario;
+  \item chiede al controller QKD la creazione di un service link e il
+        calcolo dei cammini, con i vincoli desiderati;
+  \item il controller assegna un \texttt{svc\_link\_id} e restituisce i
+        cammini candidati, con una priorità per ciascuno; il passo può
+        ripetersi con vincoli diversi;
+  \item l'orchestrator sceglie un cammino e ne chiede il deploy; i nodi
+        generano e inoltrano chiavi lungo il cammino finché i due estremi
+        sono pronti;
+  \item ricevuta la conferma, l'orchestrator richiede il provisioning
+        dell'applicazione sul service link e avvisa il controller OTN che i
+        nodi OTN possono iniziare a ricevere chiavi dai nodi QKD indicati.
+\end{enumerate}
+Si noti il parallelo con il workflow del link virtuale della 015: lì il
+controller calcolava e configurava il cammino da solo, qui lo
+\emph{propone} e attende la scelta dell'orchestrator. Con più domini QKD
+l'orchestrator ripete i passi 3–5 per ciascun dominio lungo il cammino
+inter-dominio scelto, collegando i segmenti attraverso i nodi di bordo: è
+ciò che fanno Sim et al.\ (§\ref{sec:sim}).
+
+% =====================================================================
+\subsection{Protocolli e sicurezza}
+\label{sec:protocolli}
+% =====================================================================
+
+\paragraph{Trasporto (§8).}
+Come la 015, lo standard separa il modello dei dati (YANG~1.1) dal
+protocollo di trasporto, che può essere NETCONF~\cite{rfc6241} o
+RESTCONF~\cite{rfc8040}. Con RESTCONF ogni risorsa è un URI, la lettura usa
+\texttt{GET} e la configurazione \texttt{POST}, \texttt{PUT},
+\texttt{PATCH} e \texttt{DELETE}, con codifica XML o JSON; le notifiche si
+ricevono sottoscrivendo i relativi stream. Lo standard osserva che il
+paradigma REST, senza stato, si presta bene a questo tipo di API. A titolo
+di esempio, la lettura della topologia e l'invocazione di una RPC avrebbero
+la forma:
+\begin{lstlisting}
+GET  /restconf/data/etsi-qkd-sdn-topology:qkd_network
+POST /restconf/operations/etsi-qkd-sdn-connectivity:create-service-link-id-for-app
+\end{lstlisting}
+
+\paragraph{Sicurezza (§7).}
+Il controller ha una vista centrale della rete e ne passa un sottoinsieme
+all'orchestrator; le misure di protezione dell'interfaccia (autenticazione,
+cifratura del canale, per esempio TLS sotto RESTCONF) sono lasciate
+all'implementazione. Il principio fondamentale, ereditato dalla GS~QKD~015,
+è che \textbf{le chiavi derivate da QKD non transitano mai né per il
+controller né per l'orchestrator}: nei moduli YANG compaiono solo tassi di
+chiave e l'indirizzo del KME. Un orchestrator compromesso può quindi
+causare disservizi (cammini sbagliati, risorse esaurite, denial of service)
+ma non leggere le chiavi. Lo standard raccomanda procedure accurate di
+progettazione, installazione e personalizzazione per mitigare richieste
+malevole e attacchi ai canali di controllo.
