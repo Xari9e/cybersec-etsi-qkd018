@@ -1,0 +1,90 @@
+% Shared body of the UML / E-R diagram collection (IT and EN via \T{..}{..})
+\newcommand{\diagram}[3]{% file, caption, label
+  \begin{figure}[p]
+    \centering
+    \begingroup\catcode`\_=12
+    \begin{adjustbox}{width=\linewidth,max totalheight=.84\textheight,center}
+      \input{figures/#1}
+    \end{adjustbox}
+    \endgroup
+    \caption{#2}\label{#3}
+  \end{figure}\clearpage}
+
+\begin{titlepage}
+\centering
+{\Large\bfseries \T{Diagrammi UML ed E-R}{UML and E-R diagrams}\\[2pt]
+ ETSI GS QKD 002, 015, 018\par}
+\vspace{6pt}
+{\small Cybersecurity -- Politecnico di Torino\par}
+\vspace{14pt}
+\begin{minipage}{.92\linewidth}\small
+\T{Questa raccolta descrive con diagrammi UML (casi d'uso e classi) ed E-R i tre documenti ETSI.
+Per QKD~002, che non definisce un modello dati, i diagrammi sono un \emph{modello concettuale}
+ricavato dalle clausole 4, 6 e 7. Per QKD~015 e 018 i diagrammi seguono la struttura dei
+moduli YANG: ogni \texttt{container} o \texttt{list} diventa una classe, ogni \texttt{leaf} un
+attributo, la gerarchia del tree diventa composizione.}
+{This collection describes the three ETSI documents with UML (use case and class) and E-R
+diagrams. For QKD~002, which defines no data model, the diagrams are a \emph{conceptual model}
+derived from clauses 4, 6 and 7. For QKD~015 and 018 the diagrams follow the structure of the
+YANG modules: every \texttt{container} or \texttt{list} becomes a class, every \texttt{leaf} an
+attribute, and the tree hierarchy becomes composition.}
+
+\medskip
+\textbf{\T{Fonti}{Sources}.}
+\T{QKD~015: moduli \texttt{etsi-qkd-sdn-node} ed \texttt{etsi-qkd-node-types}, revisione
+2022-01-30 (V2.1.1), verificati attributo per attributo con \texttt{pyang -f tree}.
+QKD~018: moduli \texttt{etsi-qkd-sdn-topology}, \texttt{-inventory}, \texttt{-connectivity} (revisione 2022-02-22, ETSI Forge \texttt{gs018-orch-int-sdn}), anch'essi verificati con \texttt{pyang}. Il \dsc{corsivo} indica annotazioni (unità, commenti), non nomi YANG.}
+{QKD~015: modules \texttt{etsi-qkd-sdn-node} and \texttt{etsi-qkd-node-types}, revision
+2022-01-30 (V2.1.1), checked attribute by attribute with \texttt{pyang -f tree}.
+QKD~018: modules \texttt{etsi-qkd-sdn-topology}, \texttt{-inventory}, \texttt{-connectivity} (revision 2022-02-22, ETSI Forge \texttt{gs018-orch-int-sdn}), also checked with \texttt{pyang}. \dsc{Italics} mark annotations (units, comments), not YANG names.}
+\end{minipage}
+
+\vspace{12pt}
+\begin{tikzpicture}[x=1cm,y=1cm,font=\scriptsize]
+  \node[anchor=west,font=\small\bfseries] at (-0.2,0.7) {\T{Notazione}{Notation}};
+  \draw[comp] (0,0) -- (1.4,0); \node[anchor=west] at (1.6,0) {\T{composizione (contenimento nel tree YANG)}{composition (containment in the YANG tree)}};
+  \draw[gen] (0,-0.5) -- (1.4,-0.5); \node[anchor=west] at (1.6,-0.5) {\T{generalizzazione}{generalisation}};
+  \draw[real] (0,-1.0) -- (1.4,-1.0); \node[anchor=west] at (1.6,-1.0) {\T{realizzazione}{realisation}};
+  \draw[dep] (0,-1.5) -- (1.4,-1.5); \node[anchor=west] at (1.6,-1.5) {\T{dipendenza}{dependency} (\st{include}, \st{augment}, \st{uses} \dots)};
+  \draw[ref] (0,-2.0) -- (1.4,-2.0); \node[anchor=west] at (1.6,-2.0) {\T{riferimento per}{reference by} \texttt{yang:uuid} (\T{non validato}{not validated})};
+  \draw[lref] (0,-2.5) -- (1.4,-2.5); \node[anchor=west] at (1.6,-2.5) {\texttt{leafref} (\T{validato dallo schema}{schema-validated})};
+  \node[anchor=west] at (8.4,0) {\texttt{rw} / \texttt{ro}: \texttt{config true} / \texttt{config false}};
+  \node[anchor=west] at (8.4,-0.5) {\texttt{[0..1]}: \T{foglia opzionale}{optional leaf} (\texttt{?}); \texttt{[0..*]}: \texttt{leaf-list}};
+  \node[anchor=west] at (8.4,-1.0) {E-R: \T{notazione di Chen, cardinalità}{Chen notation, cardinalities} (min,max)};
+  \node[anchor=west] at (8.4,-1.5) {E-R: \T{doppio bordo = entità debole / relazione identificante}{double border = weak entity / identifying relationship}};
+  \node[anchor=west] at (8.4,-2.0) {\T{Colori}{Colours}:
+    \tikz\node[fill=c002,draw,minimum size=2mm,inner sep=0]{}; 002
+    \tikz\node[fill=c015,draw,minimum size=2mm,inner sep=0]{}; 015
+    \tikz\node[fill=c018,draw,minimum size=2mm,inner sep=0]{}; 018 topology/connectivity
+    \tikz\node[fill=cinv,draw,minimum size=2mm,inner sep=0]{}; 018 inventory};
+\end{tikzpicture}
+
+\end{titlepage}
+{\small\listoffigures}\clearpage
+
+\diagram{uc_002}{\T{GS QKD 002 -- diagramma dei casi d'uso: i sei casi della clausola 7, tutti basati sulla distribuzione di una chiave segreta condivisa (§4), che richiede un canale pubblico autenticato; il key relay tramite nodo fidato è parte di UC6 ed è una delle architetture di UC3.}%
+  {GS QKD 002 -- use case diagram: the six cases of clause 7, all relying on the distribution of a shared secret key (§4), which requires an authenticated public channel; key relay through a trusted node is part of UC6 and one of the architectures of UC3.}}{fig:uc002}
+
+\diagram{cls_002}{\T{GS QKD 002 -- modello concettuale delle classi: QKD realizza solo la primitiva di distribuzione della chiave (§4); il consumo della chiave avviene ai livelli L2--L7 (§6); la rete con nodi fidati e i casi d'uso vengono dalla clausola 7.}%
+  {GS QKD 002 -- conceptual class model: QKD realises only the key-distribution primitive (§4); the key is consumed at layers L2--L7 (§6); the network with trusted nodes and the use cases come from clause 7.}}{fig:cls002}
+
+\diagram{cls_015}{\T{GS QKD 015 -- diagramma delle classi del modulo \texttt{etsi-qkd-sdn-node}: la radice \texttt{qkd\_node} contiene capability, applicazioni, interfacce e link di associazione di chiave, più le notifiche del modulo.}%
+  {GS QKD 015 -- class diagram of the \texttt{etsi-qkd-sdn-node} module: the \texttt{qkd\_node} root holds capabilities, applications, interfaces and key association links, plus the module's notifications.}}{fig:cls015}
+
+\diagram{enum_015}{\T{GS QKD 015 -- identity e typedef del modulo \texttt{etsi-qkd-node-types}, importato anche da QKD 018.}%
+  {GS QKD 015 -- identities and typedefs of the \texttt{etsi-qkd-node-types} module, also imported by QKD 018.}}{fig:enum015}
+
+\diagram{er_015}{\T{GS QKD 015 -- schema E-R dei dati che il controller raccoglie dai nodi.}%
+  {GS QKD 015 -- E-R schema of the data the controller collects from the nodes.}}{fig:er015}
+
+\diagram{cls_018_topo}{\T{GS QKD 018 -- diagramma delle classi di \texttt{etsi-qkd-sdn-topology} e degli \texttt{augment} di \texttt{etsi-qkd-sdn-inventory}.}%
+  {GS QKD 018 -- class diagram of \texttt{etsi-qkd-sdn-topology} and of the \texttt{augment}s of \texttt{etsi-qkd-sdn-inventory}.}}{fig:cls018t}
+
+\diagram{cls_018_conn}{\T{GS QKD 018 -- diagramma delle classi di \texttt{etsi-qkd-sdn-connectivity}: applicazione, service link mappato, vincoli, path candidati e path scelto, con le RPC che li manipolano.}%
+  {GS QKD 018 -- class diagram of \texttt{etsi-qkd-sdn-connectivity}: application, mapped service link, constraints, candidate paths and chosen path, with the RPCs that manipulate them.}}{fig:cls018c}
+
+\diagram{er_018}{\T{GS QKD 018 -- schema E-R della vista dell'orchestratore su un dominio QKD (i tre moduli insieme).}%
+  {GS QKD 018 -- E-R schema of the orchestrator's view of one QKD domain (the three modules together).}}{fig:er018}
+
+\diagram{map_002_015_018}{\T{Tracciabilità: come i concetti di QKD 002 vengono realizzati dal modello del nodo di QKD 015 e astratti dal modello di orchestrazione di QKD 018.}%
+  {Traceability: how the QKD 002 concepts are realised by the QKD 015 node model and abstracted by the QKD 018 orchestration model.}}{fig:map}

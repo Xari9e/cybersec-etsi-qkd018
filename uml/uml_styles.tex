@@ -1,0 +1,79 @@
+% =====================================================================
+%  TikZ styles for UML class diagrams and E-R diagrams
+%  Shared by the IT and EN versions (\iflangit selects the language)
+% =====================================================================
+\usetikzlibrary{arrows.meta,positioning,shapes.multipart,shapes.geometric,
+                shapes.misc,fit,calc,backgrounds}
+
+\newcommand{\T}[2]{\iflangit#1\else#2\fi}   % \T{italiano}{english}
+\newcommand{\st}[1]{«#1»}                     % UML stereotype
+\newcommand{\ul}[1]{\underline{#1}}           % E-R identifier
+\newcommand{\dsc}[1]{{\rmfamily\itshape #1}}  % descriptive (non-YANG) name
+
+\definecolor{c002}{RGB}{255,236,179}
+\definecolor{c015}{RGB}{200,225,255}
+\definecolor{c018}{RGB}{205,240,205}
+\definecolor{cinv}{RGB}{255,215,215}
+\definecolor{cref}{RGB}{235,235,235}
+\definecolor{cnote}{RGB}{255,252,210}
+
+\tikzset{
+  % --- UML ---
+  cls/.style={draw, rectangle split, rectangle split parts=2,
+    rectangle split part align={center,left},
+    rectangle split part fill={#1,white},
+    font=\scriptsize\ttfamily, inner sep=2.2pt, minimum width=2.4cm,
+    align=left},
+  cls/.default=c015,
+  cls3/.style={draw, rectangle split, rectangle split parts=3,
+    rectangle split part align={center,left,left},
+    rectangle split part fill={#1,white,white},
+    font=\scriptsize\ttfamily, inner sep=2.2pt, minimum width=2.4cm,
+    align=left},
+  cls3/.default=c015,
+  enum/.style={draw, rectangle split, rectangle split parts=2,
+    rectangle split part align={center,left},
+    rectangle split part fill={#1,white},
+    font=\scriptsize\ttfamily, inner sep=2pt, minimum width=2.6cm, align=left},
+  enum/.default=c015,
+  note/.style={draw, chamfered rectangle, chamfered rectangle corners=north east,
+    chamfered rectangle xsep=4pt, fill=cnote, font=\scriptsize, align=left,
+    inner sep=3pt, text width=#1},
+  note/.default=4cm,
+  pkg/.style={draw, dashed, rounded corners=2pt, inner sep=8pt},
+  % composition / aggregation / generalisation / dependency / association
+  comp/.style={-{Diamond[fill=black,length=3.2mm,width=2mm]}},
+  agg/.style={-{Diamond[open,length=3.2mm,width=2mm]}},
+  gen/.style={-{Triangle[open,length=3mm,width=2.6mm]}},
+  real/.style={dashed,-{Triangle[open,length=3mm,width=2.6mm]}},
+  dep/.style={dashed,-{Straight Barb[length=2mm]}},
+  ref/.style={densely dashed,-{Straight Barb[length=2mm]},blue!55!black},
+  lref/.style={-{Straight Barb[length=2mm]},green!40!black},
+  assoc/.style={-},
+  nav/.style={-{Straight Barb[length=2mm]}},
+  m/.style={font=\tiny\ttfamily, inner sep=1pt, fill=white, fill opacity=.85,
+            text opacity=1},
+  rl/.style={font=\tiny\ttfamily\itshape, inner sep=1pt},
+  % --- use cases ---
+  uc/.style={ellipse, draw, fill=#1, font=\scriptsize, align=center,
+    minimum width=3.3cm, minimum height=9mm, inner sep=1pt},
+  uc/.default=c002,
+  actor/.pic={\draw[thick] (0,0.36) circle (0.11);
+              \draw[thick] (0,0.25)--(0,0.02) (-0.15,0.17)--(0.15,0.17)
+                           (0,0.02)--(-0.11,-0.18) (0,0.02)--(0.11,-0.18);},
+  % --- E-R (Chen style with attributes listed inside the entity) ---
+  ent/.style={draw, thick, rectangle split, rectangle split parts=2,
+    rectangle split part align={center,left},
+    rectangle split part fill={#1,white},
+    font=\scriptsize\ttfamily, inner sep=2.2pt, minimum width=2.4cm, align=left},
+  ent/.default=c015,
+  went/.style={ent=#1, append after command={\pgfextra{\draw[thick]
+    ($(\tikzlastnode.north west)+(-1.8pt,1.8pt)$) rectangle
+    ($(\tikzlastnode.south east)+(1.8pt,-1.8pt)$);}}},   % weak entity
+  went/.default=c015,
+  rel/.style={diamond, draw, thick, fill=white, aspect=2.2, inner sep=1pt,
+    font=\tiny\ttfamily\bfseries, align=center},
+  wrel/.style={rel, double, double distance=1pt},          % identifying
+  card/.style={font=\tiny\ttfamily, inner sep=1pt, fill=white},
+  er/.style={thick},
+}

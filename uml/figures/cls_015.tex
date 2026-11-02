@@ -1,0 +1,112 @@
+% UML class diagram of the YANG module etsi-qkd-sdn-node (ETSI GS QKD 015 V2.1.1, rev. 2022-01-30)
+% rw = config true, ro = config false; ? = optional leaf; [*] = leaf-list
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[cls] (node) at (2.0,12.6) {\st{container}\\\textbf{qkd_node}\nodepart{two}%
+    rw qkdn_id : yang:uuid \{mandatory\}\\
+    ro qkdn_status : qkdn-status-types [0..1]\\
+    rw qkdn_version : string [0..1]\\
+    rw qkdn_location_id : string [0..1]};
+  \node[cls] (cap) at (-4.6,14.6) {\st{container}\\\textbf{qkdn_capabilities}\nodepart{two}%
+    rw link_stats_support : boolean [0..1]\\
+    rw application_stats_support : boolean [0..1]\\
+    rw key_relay_mode_enable : boolean [0..1]};
+  \draw[comp] (cap.east) -| node[m,pos=.1,above]{1} (node.north);
+
+  % ---------------- applications ----------------
+  \node[cls] (app) at (-6.5,6.6) {\st{list} key = app_id\\\textbf{qkd_app}\nodepart{two}%
+    rw app_id : yang:uuid\\
+    ro app_status : app-status-types [0..1]\\
+    rw app_type : qkd-app-types [0..1]\\
+    rw server_app_id : inet:uri [0..1]\\
+    rw client_app_id : inet:uri [0..*]\\
+    rw app_priority : uint32 [0..1]\\
+    ro creation_time : yang:date-and-time [0..1]\\
+    rw expiration_time : yang:date-and-time [0..1]\\
+    rw backing_qkdl_id : yang:uuid [0..*]\\
+    rw local_qkdn_id : yang:uuid [0..1]\\
+    rw remote_qkdn_id : yang:uuid [0..1]};
+  \draw[comp] (app.north) |- node[rl,pos=.75,above]{qkd_applications/qkd_app} node[m,pos=.08,right]{0..*} ($(node.west)+(0,-0.45)$);
+  \node[cls] (qos) at (-10.0,1.4) {\st{container}\\\textbf{app_qos}\nodepart{two}%
+    rw max_bandwidth : uint32 \dsc{(bit/s)}\\
+    rw min_bandwidth : uint32 \dsc{(bit/s)}\\
+    rw jitter : uint32 \dsc{(ms)}\\
+    rw ttl : uint32 \dsc{(s)}\\
+    rw clients_shared_path_enable : boolean\\
+    rw clients_shared_keys_required : boolean};
+  \node[cls] (stat) at (-4.6,1.4) {\st{list} key = end_time\\\textbf{statistics}\nodepart{two}%
+    ro end_time : yang:date-and-time\\
+    ro start_time : yang:date-and-time [0..1]\\
+    ro consumed_bits : uint32 [0..1]};
+  \draw[comp] (qos.north) -- ++(0,0.6) node[m,pos=.4,left]{1} -| ($(app.south)+(-1.8,0)$);
+  \draw[comp] (stat.north) -- node[m,pos=.12,right]{0..*} node[rl,pos=.55,right]{app_statistics/statistics} (app.south -| stat.north);
+
+  % ---------------- interfaces ----------------
+  \node[cls] (ifc) at (2.0,9.9) {\st{list} key = qkdi_id\\\textbf{qkd_interface}\nodepart{two}%
+    rw qkdi_id : uint32\\
+    rw qkdi_model : string [0..1]\\
+    rw qkdi_type : qkd-technology-types [0..1]\\
+    ro qkdi_status : iface-status-types [0..1]};
+  \draw[comp] (ifc.north) -- node[m,pos=.12,right]{0..*} node[rl,pos=.5,right]{qkd_interfaces/qkd_interface} (node.south -| ifc.north);
+  \node[cls] (att) at (-1.6,7.6) {\st{container}\\\textbf{qkdi_att_point}\nodepart{two}%
+    rw device : string [0..1]\\
+    rw port : uint32 [0..1]};
+  \node[cls] (icap) at (4.0,7.6) {\st{container}\\\textbf{qkdi_capabilities}\nodepart{two}%
+    rw role_support : qkd-role-types\\
+    rw wavelength_range : wavelength-range-type\\
+    rw max_absorption : decimal64};
+  \draw[comp] (att.north) -- node[m,pos=.15,left]{1} (att.north |- ifc.south);
+  \draw[comp] (icap.north) -- node[m,pos=.15,right]{1} (icap.north |- ifc.south);
+
+  % ---------------- links ----------------
+  \node[cls] (lnk) at (11.6,6.4) {\st{list} key = qkdl_id\\\textbf{qkd_link}\nodepart{two}%
+    rw qkdl_id : yang:uuid\\
+    rw qkdl_status : link-status-types [0..1]\\
+    rw qkdl_enable : boolean = true\\
+    rw qkdl_type : qkd-link-types \{VIRT | PHYS\}\\
+    rw qkdl_applications : yang:uuid [0..*]\\[2pt]
+    \dsc{when qkdl_type = VIRT:}\\
+    \ \ rw virt_prev_hop : yang:uuid [0..1]\\
+    \ \ rw virt_next_hop : yang:uuid [0..*]\\
+    \ \ rw virt_bandwidth : uint32 \dsc{(bit/s)}\\[2pt]
+    \dsc{when qkdl_type = PHYS:}\\
+    \ \ rw phys_channel_att : decimal64 \dsc{(dB)}\\
+    \ \ rw phys_wavelength : wavelength\\
+    \ \ rw phys_qkd_role : qkd-role-types};
+  \draw[comp] (lnk.north) |- node[m,pos=.08,right]{0..*} node[rl,pos=.75,above]{qkd_links/qkd_link} ($(node.east)+(0,-0.3)$);
+  \node[cls] (ep) at (6.9,1.2) {\st{container}\\\textbf{qkdl_local / qkdl_remote}\nodepart{two}%
+    rw qkdn_id : yang:uuid [0..1]\\
+    rw qkdi_id : uint32 [0..1]};
+  \draw[comp] (ep.east) -| node[rl,pos=.75,right,align=left]{qkdl_local [1]\\qkdl_remote [1]} ($(lnk.south)+(-1.6,0)$);
+  \node[cls] (perf) at (13.0,1.2) {\st{container}\\\textbf{qkdl_performance}\nodepart{two}%
+    ro expected_consumption : uint32 \dsc{(bit/s)}\\
+    ro skr : uint32 \dsc{(bit/s)}\\
+    ro eskr : uint32 \dsc{(bit/s)}};
+  \draw[comp] (perf.north) -- node[m,pos=.15,right]{1} (perf.north |- lnk.south);
+  \node[cls] (pp) at (13.0,-1.3) {\st{list} key = perf_type\\\textbf{phys_perf}\nodepart{two}%
+    ro perf_type : phys-perf-types \{QBER | SNR\}\\
+    ro value : decimal64 [0..1]};
+  \draw[comp] (pp.north) -- node[m,pos=.15,right]{0..*} node[rl,pos=.5,left]{\{when PHYS\}} (perf.south);
+
+  % ---------------- references by uuid (no leafref in the module) ----------------
+  \coordinate (r1) at ($(app.east)+(0,-1.2)$); \coordinate (r2) at ($(app.east)+(0,-0.4)$);
+  \draw[ref] (r1) -- node[rl,above,pos=.5]{backing_qkdl_id} node[m,pos=.95,below]{0..*} (r1 -| lnk.west);
+  \draw[ref] (r2 -| lnk.west) -- node[rl,above,pos=.5]{qkdl_applications} node[m,pos=.95,above]{0..*} (r2);
+  \draw[ref] (ep.north) |- node[rl,pos=.12,left]{(qkdn_id, qkdi_id)} node[m,pos=.9,above]{0..1} (ifc.east);
+
+  % ---------------- notifications ----------------
+  \node[cls=cref,anchor=north west] (ntf) at (-12.6,-1.9) {\st{notification}\\\textbf{etsi-qkd-sdn-node}\nodepart{two}%
+    sdqkdn_application_new(qkd_application)\\
+    sdqkdn_application_qos_update(app_id, app_qos, app_priority)\\
+    sdqkdn_application_disconnected(app_id)\\
+    sdqkdn_interface_new(qkd_interface) \quad sdqkdn_interface_down(qkdi_id, reason)\\
+    sdqkdn_interface_out(qkdi_id) \quad sdqkdn_link_down(qkdl_id, reason)\\
+    sdqkdn_link_perf_update(qkdl_id, performance)\\
+    sdqkdn_link_overloaded(qkdl_id, performance)\\
+    alarm(link | interface | application, severity) \quad event(\dots, severity)};
+  \node[note=6.4cm,anchor=north west] at (-2.4,-1.9) {%
+    \T{Le associazioni tratteggiate blu sono riferimenti per \texttt{yang:uuid}: il modulo non usa \texttt{leafref}, quindi l'integrità referenziale non è garantita dallo schema.}%
+      {Dashed blue associations are references by \texttt{yang:uuid}: the module uses no \texttt{leafref}, so referential integrity is not enforced by the schema.}\\[2pt]
+    \T{\texttt{local\_qkdn\_id}, \texttt{remote\_qkdn\_id}, \texttt{virt\_prev\_hop}, \texttt{virt\_next\_hop} e \texttt{qkdl\_remote.qkdn\_id} puntano ad altri \texttt{qkd\_node} della rete.}%
+      {\texttt{local\_qkdn\_id}, \texttt{remote\_qkdn\_id}, \texttt{virt\_prev\_hop}, \texttt{virt\_next\_hop} and \texttt{qkdl\_remote.qkdn\_id} point to other \texttt{qkd\_node}s of the network.}\\[2pt]
+    \T{I tipi senza prefisso sono typedef di \texttt{etsi-qkd-node-types}.}{Unprefixed types are typedefs of \texttt{etsi-qkd-node-types}.}};
+\end{tikzpicture}

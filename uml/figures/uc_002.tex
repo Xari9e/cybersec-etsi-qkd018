@@ -1,0 +1,44 @@
+% UML use case diagram -- ETSI GS QKD 002 V1.1.1, clause 7
+\begin{tikzpicture}[x=1cm,y=1cm]
+  % system boundary
+  \draw[thick,fill=gray!4] (2.6,-0.9) rectangle (13.4,8.1);
+  \node[anchor=north west,font=\small\bfseries] at (2.7,8.05)
+    {\T{Sistema/rete QKD (GS QKD 002)}{QKD system/network (GS QKD 002)}};
+
+  % six use cases (clause 7)
+  \node[uc] (u1) at (5,7.0) {UC1 \T{Backup remoto /}{Offsite backup /}\\ \T{continuità operativa}{business continuity}};
+  \node[uc] (u2) at (5,5.6) {UC2 \T{Rete metropolitana}{Enterprise metropolitan}\\ \T{aziendale}{area network}};
+  \node[uc] (u3) at (5,4.2) {UC3 \T{Controllo e acquisizione}{Critical infrastructure}\\ \T{dati di infrastrutture critiche}{control and data acquisition}};
+  \node[uc] (u4) at (5,2.8) {UC4 \T{Protezione}{Backbone}\\ \T{del backbone}{protection}};
+  \node[uc] (u5) at (5,1.4) {UC5 \T{Rete di accesso}{High-security}\\ \T{ad alta sicurezza}{access network}};
+  \node[uc] (u6) at (5,0.0) {UC6 \T{Servizio a}{Long-haul}\\ \T{lunga distanza}{service}};
+
+  % included / extending use cases
+  \node[uc=white,minimum width=3.6cm] (kd)  at (10.6,4.2) {\T{Distribuire una chiave}{Distribute a shared}\\ \T{segreta condivisa}{secret key} {\tiny(§4)}};
+  \node[uc=white,minimum width=3.6cm] (au)  at (10.6,6.7) {\T{Autenticare il canale}{Authenticate the public}\\ \T{pubblico (segreto pre-condiviso)}{channel (pre-shared secret)}};
+  \node[uc=white,minimum width=3.6cm] (rel) at (10.6,1.6) {\T{Rilanciare la chiave}{Relay the key through}\\ \T{tramite nodo fidato}{a trusted node}};
+
+  \foreach \u in {u1,u2,u3,u4,u5,u6}
+    \draw[dep] (\u.east) -- (kd.west);
+  \node[rl,fill=white] at (8.0,4.45) {\st{include}};
+  \draw[dep] (kd) -- node[rl,right]{\st{include}} (au);
+  \draw[dep] (u6.east) to[out=0,in=200] node[rl,pos=.55,below right]{\st{include}} (rel.west);
+  \draw[dep] (u3.east) to[out=-10,in=160] node[rl,pos=.75,above]{\st{extend}} (rel.north west);
+
+  % primary actors (left)
+  \pic at (0.4,6.3) {actor}; \node[font=\scriptsize,align=center] (a1) at (0.4,5.75) {\T{Impresa /}{Enterprise /}\\\T{ente pubblico}{public body}};
+  \pic at (0.4,4.2) {actor}; \node[font=\scriptsize,align=center] (a3) at (0.4,3.65) {\T{Gestore infrastr.}{Critical-infr.}\\\T{critica (ferrovia)}{operator (railway)}};
+  \pic at (0.4,2.4) {actor}; \node[font=\scriptsize,align=center] (a4) at (0.4,1.85) {\T{Infrastructure /}{Infrastructure /}\\\T{service provider}{service provider}};
+  \pic at (0.4,0.6) {actor}; \node[font=\scriptsize,align=center] (a5) at (0.4,0.05) {\T{Operatore di accesso,}{Access operator,}\\\T{utenti (ONU)}{users (ONU)}};
+  \pic at (0.4,-1.2) {actor}; \node[font=\scriptsize,align=center] (a6) at (0.4,-1.75) {\T{Stazioni di terra A, B}{Ground stations A, B}};
+  \foreach \a/\u in {a1/u1,a1/u2,a3/u3,a4/u4,a5/u5,a6/u6}
+    \draw (\a.north east) ++(0,0.25) -- (\u.west);
+
+  % secondary actors (right)
+  \pic at (15.4,4.6) {actor};
+  \node[font=\scriptsize,align=center] (s1) at (15.4,3.85) {\T{Consumatore di chiave}{Key consumer}\\{\tiny L2: PPP, MACsec, link encryptor}\\{\tiny L3: IKE/IPsec \quad L4: TLS}\\{\tiny \T{applicazione}{application}}};
+  \draw (kd.east) -- (14.9,4.5);
+  \pic at (15.4,1.4) {actor};
+  \node[font=\scriptsize,align=center] (s2) at (15.4,0.75) {\T{Nodo mobile C}{Moving node C}\\{\tiny\T{satellite, aereo}{satellite, aircraft}}};
+  \draw (rel.east) -- (14.9,1.4);
+\end{tikzpicture}

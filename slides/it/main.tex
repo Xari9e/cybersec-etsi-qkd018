@@ -697,12 +697,12 @@ qkd_network
     \toprule
     \textbf{Elemento} & \textbf{Foglie aggiunte} \\
     \midrule
-    \texttt{qkdn} & versione, capability, location, IP e porta del KME
+    \texttt{qkdn} & versione, capability, location, \texttt{KME\_ip\_port}
     (dove i SAE prelevano le chiavi via QKD~014), stato \\
-    \texttt{qkdi} & ruolo, modello, tipo, punto di attacco, stato \\
+    \texttt{qkdi} & \texttt{role\_support}, modello, tipo, punto di attacco, stato \\
     \texttt{phys\_link} & \texttt{enable}, \texttt{wavelength},
     \texttt{performance} (\texttt{skr}, \texttt{eskr},
-    \texttt{expected\_consumption}, QBER, SNR), stato \\
+    \texttt{expected\_consumption}, \texttt{phys\_link\_perf}: QBER, SNR), stato \\
     \texttt{svc\_link} & \texttt{bandwidth}, \texttt{performance},
     \texttt{path\_restoration} (\texttt{AUTOMATIC}/\texttt{MANUAL},
     \texttt{hold\_off\_time}), stato \\
@@ -712,8 +712,8 @@ qkd_network
 
   \small Notifiche: \texttt{sdqkdn\_new}, \texttt{\_interface\_new},
   \texttt{\_phys\_link\_new}, \texttt{\_svc\_link\_new}, varianti
-  \texttt{\_perf\_update} e \texttt{\_overloaded}, \texttt{alarm},
-  \texttt{event}.
+  \texttt{\_perf\_update} e \texttt{\_overloaded} per link fisici e service
+  link, \texttt{alarm} ed \texttt{event} (lo stato del nodo viaggia qui).
 \end{frame}
 
 \begin{frame}[fragile]{Tre moduli YANG: connectivity}
@@ -726,9 +726,11 @@ connectivity_service/qkd_service
       +-- app_mapped_svc_link
            +-- svc_link_and_qkdn_ids
            +-- path_constraints
-           |    (include/exclude_nodes)
+           |    (include/exclude_nodes:
+           |     coppie nodo, interfaccia)
            +-- candidate_paths
-           +-- deploy_path (path_id)
+           |    +-- candidate_path* [path_id]
+           +-- deploy_path (path_id, phys_links)
 \end{lstlisting}
     \end{column}
     \begin{column}{0.46\textwidth}

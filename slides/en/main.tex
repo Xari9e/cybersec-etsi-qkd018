@@ -698,12 +698,12 @@ qkd_network
     \toprule
     \textbf{Element} & \textbf{Added leaves} \\
     \midrule
-    \texttt{qkdn} & version, capabilities, location, KME IP address and
-    port (where SAEs fetch keys via QKD~014), state \\
-    \texttt{qkdi} & role, model, type, attachment point, state \\
+    \texttt{qkdn} & version, capabilities, location, \texttt{KME\_ip\_port}
+    (where SAEs fetch keys via QKD~014), state \\
+    \texttt{qkdi} & \texttt{role\_support}, model, type, attachment point, state \\
     \texttt{phys\_link} & \texttt{enable}, \texttt{wavelength},
     \texttt{performance} (\texttt{skr}, \texttt{eskr},
-    \texttt{expected\_consumption}, QBER, SNR), state \\
+    \texttt{expected\_consumption}, \texttt{phys\_link\_perf}: QBER, SNR), state \\
     \texttt{svc\_link} & \texttt{bandwidth}, \texttt{performance},
     \texttt{path\_restoration} (\texttt{AUTOMATIC}/\texttt{MANUAL},
     \texttt{hold\_off\_time}), state \\
@@ -713,8 +713,9 @@ qkd_network
 
   \small Notifications: \texttt{sdqkdn\_new}, \texttt{\_interface\_new},
   \texttt{\_phys\_link\_new}, \texttt{\_svc\_link\_new}, the
-  \texttt{\_perf\_update} and \texttt{\_overloaded} variants,
-  \texttt{alarm}, \texttt{event}.
+  \texttt{\_perf\_update} and \texttt{\_overloaded} variants for physical
+  and service links, \texttt{alarm} and \texttt{event} (node status travels
+  here).
 \end{frame}
 
 \begin{frame}[fragile]{Three YANG modules: connectivity}
@@ -727,9 +728,11 @@ connectivity_service/qkd_service
       +-- app_mapped_svc_link
            +-- svc_link_and_qkdn_ids
            +-- path_constraints
-           |    (include/exclude_nodes)
+           |    (include/exclude_nodes:
+           |     node, interface pairs)
            +-- candidate_paths
-           +-- deploy_path (path_id)
+           |    +-- candidate_path* [path_id]
+           +-- deploy_path (path_id, phys_links)
 \end{lstlisting}
     \end{column}
     \begin{column}{0.46\textwidth}

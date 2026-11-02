@@ -57,15 +57,18 @@ inventory without duplicating anything.
 \toprule
 \textbf{Element} & \textbf{Added leaves} \\
 \midrule
-\texttt{qkdn} & version, capabilities, location, KME IP address and port
-(where SAEs fetch keys via QKD~014), status \\
-\texttt{qkdi} & supported role, model, type, attachment point, status \\
+\texttt{qkdn} & \texttt{qkdn\_version}, \texttt{qkdn\_capabilities},
+\texttt{qkdn\_location\_id}, \texttt{KME\_ip\_port} (KME IP address and port,
+where SAEs fetch keys via QKD~014), \texttt{qkdn\_status} \\
+\texttt{qkdi} & \texttt{role\_support}, \texttt{qkdi\_model},
+\texttt{qkdi\_type}, \texttt{qkdi\_att\_point}, \texttt{qkdi\_status} \\
 \texttt{phys\_link} & \texttt{enable} (configurable), \texttt{wavelength},
 \texttt{performance} (\texttt{skr}, \texttt{eskr},
-\texttt{expected\_consumption}, QBER, SNR), status \\
+\texttt{expected\_consumption} and the \texttt{phys\_link\_perf} list with
+QBER and SNR), \texttt{phys\_link\_status} \\
 \texttt{svc\_link} & \texttt{bandwidth}, \texttt{performance},
-\texttt{path\_restoration} (\texttt{AUTOMATIC}/\texttt{MANUAL},
-\texttt{hold\_off\_time} in ms), status \\
+\texttt{path\_restoration} (\texttt{type} \texttt{AUTOMATIC}/\texttt{MANUAL},
+\texttt{hold\_off\_time} in ms), \texttt{svc\_link\_status} \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -73,7 +76,13 @@ inventory without duplicating anything.
 The module also defines the notifications that implement the reactive part
 of §5.5: \texttt{sdqkdn\_new}, \texttt{sdqkdn\_interface\_new},
 \texttt{sdqkdn\_phys\_link\_new}, \texttt{sdqkdn\_svc\_link\_new}, the
-\texttt{\_perf\_update} and \texttt{\_overloaded} variants and the generic
+\texttt{\_perf\_update} and \texttt{\_overloaded} variants, separate for
+physical and service links (e.g.\ \texttt{sdqkdn\_phys\_link\_overloaded}),
+and the generic \texttt{alarm} and \texttt{event}, which carry status,
+message and severity of nodes, interfaces and links. The node-status
+notifications listed in §5.5 (\texttt{sdqkdn\_operating}, \texttt{\_down},
+\texttt{\_failure}, \texttt{\_out}) have no dedicated \texttt{notification}
+in the module: the status travels in the \texttt{qkdn\_status} field of
 \texttt{alarm} and \texttt{event}. The \texttt{eskr} field of the links is
 what tells the orchestrator whether a path can carry a new service,
 according to~\eqref{eq:admissible}.
@@ -85,10 +94,14 @@ serve them.
 connectivity_service/qkd_service/qkd_app* [app_id]
  +-- (application data from QKD 015: status, type, QoS, statistics)
  +-- app_mapped_svc_link
-      +-- svc_link_and_qkdn_ids   service link and endpoints
-      +-- path_constraints        include_nodes / exclude_nodes
-      +-- candidate_paths         num_of_candidate_paths + list of paths
-      +-- deploy_path             chosen path_id
+      +-- svc_link_and_qkdn_ids   svc_link_id_ref + endpoints (node, interface)
+      +-- path_constraints
+      |    +-- include_nodes* [qkdn_id_ref qkdi_id_ref]
+      |    +-- exclude_nodes* [qkdn_id_ref qkdi_id_ref]
+      +-- candidate_paths
+      |    +-- num_of_candidate_paths
+      |    +-- candidate_path* [path_id]   phys_links*  (path_id = rank)
+      +-- deploy_path             path_id + phys_links* of the chosen path
 \end{lstlisting}
 Here the \texttt{rpc}s appear, mirroring the provisioning workflow step by
 step:
@@ -98,7 +111,8 @@ step:
         local and remote node;
   \item[create-candidate-paths-per-service-link-for-app] the controller
         computes candidate paths honouring QoS and the
-        \texttt{include\_nodes}/\texttt{exclude\_nodes} constraints;
+        \texttt{include\_nodes}/\texttt{exclude\_nodes} constraints,
+        expressed as (node, interface) pairs;
   \item[update-candidate-paths-per-service-link-for-app] recomputation with
         different constraints;
   \item[deploy-a-candidate-path-per-service-link-for-app] the orchestrator

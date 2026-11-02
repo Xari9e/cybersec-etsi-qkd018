@@ -1,0 +1,73 @@
+% E-R diagram (Chen notation) derived from the three YANG modules of ETSI GS QKD 018
+% (topology + inventory + connectivity, rev. 2022-02-22): the orchestrator's view of one QKD domain
+\begin{tikzpicture}[x=1cm,y=1cm]
+  % ---------------- entities ----------------
+  \node[ent=c018] (N) at (0.8,6) {\textbf{SDQKD_NODE}\nodepart{two}%
+    \ul{qkdn_id}\\ qkdn_version, qkdn_location_id\\ link_stats_support\\ application_stats_support\\ key_relay_mode_enable\\ KME_ip, KME_port\\ qkdn_status};
+  \node[went=c018] (I) at (-7,6) {\textbf{QKD_INTERFACE}\nodepart{two}%
+    \ul{qkdi_id}\\ role_support\\ qkdi_model, qkdi_type\\ att_device, att_port\\ qkdi_status};
+  \node[ent=c018] (P) at (-7,11.8) {\textbf{PHYS_LINK}\nodepart{two}%
+    \ul{phys_link_id}\\ link_type\\ enable, wavelength\\ expected_consumption\\ skr, eskr\\ phys_link_status};
+  \node[went=c018] (PF) at (-13.0,11.8) {\textbf{PHYS_LINK_PERF}\nodepart{two}\ul{type} (QBER|SNR)\\ value};
+  \node[ent=c018] (S) at (6,11.8) {\textbf{SVC_LINK}\nodepart{two}%
+    \ul{svc_link_id}\\ link_type\\ bandwidth\\ expected_consumption\\ skr, eskr\\ restoration_type (AUTOMATIC|MANUAL)\\ hold_off_time\\ svc_link_status};
+  \node[ent=c018] (A) at (6,0.8) {\textbf{QKD_APP}\nodepart{two}%
+    \ul{app_id}\\ app_status, app_type\\ server_app_id, client_app_id (0,N)\\ app_priority, creation_time, expiration_time\\ max_bandwidth, min_bandwidth, jitter, ttl\\ num_of_candidate_paths};
+  \node[went=c018] (C) at (-2.6,-2.4) {\textbf{CANDIDATE_PATH}\nodepart{two}\ul{path_id} \dsc{(= \T{priorità}{priority})}};
+  \node[went=c018] (ST) at (13.4,0.8) {\textbf{APP_STATISTICS}\nodepart{two}\ul{end_time}\\ start_time\\ consumed_bits};
+
+  % ---------------- relationships ----------------
+  \node[wrel] (h) at (-3.6,6) {HAS\\IFACE};
+  \draw[er] (N.west) -- node[card,pos=.3,above]{(0,N)} (h);
+  \draw[er] (h) -- node[card,pos=.7,above]{(1,1)} (I.east);
+
+  \node[wrel] (pf) at (-10.3,11.8) {HAS\\PERF};
+  \draw[er] (P.west) -- node[card,pos=.4,above]{(0,N)} (pf);
+  \draw[er] (pf) -- node[card,pos=.5,above]{(1,1)} (PF.east);
+
+  \node[rel] (pe) at (-7,8.7) {PHYS\\END};
+  \draw[er] (P.south) -- node[card,pos=.5,right]{(0,2)} (pe);
+  \draw[er] (pe) -- node[card,pos=.5,right]{(0,N)} (I.north);
+  \node[font=\tiny\ttfamily,anchor=west] at (-5.9,8.7) {role \{local, remote\}};
+
+  \node[rel] (se) at (-2.4,9.6) {SVC\\END};
+  \draw[er] (S.west) -- node[card,pos=.15,above]{(0,2)} (se);
+  \draw[er] (se) -- node[card,pos=.7,above right]{(0,N)} (I.north east);
+  \node[font=\tiny\ttfamily,anchor=north] at (-2.4,9.05) {role \{local, remote\}};
+
+  \node[rel] (mp) at (6,5.6) {MAPPED\\TO};
+  \draw[er] (S.south) -- node[card,pos=.5,right]{(0,N)} (mp);
+  \draw[er] (mp) -- node[card,pos=.5,right]{(0,1)} (A.north);
+
+  \node[rel] (inc) at (-1.0,1.3) {INCLUDE};
+  \node[rel] (exc) at (1.6,0.3) {EXCLUDE};
+  \draw[er] ($(I.south)+(-0.5,0)$) |- node[card,pos=.3,left]{(0,N)} (inc.west);
+  \draw[er] (inc.east) -- node[card,pos=.7,above]{(0,N)} (inc.east -| A.west);
+  \draw[er] ($(I.south)+(0.5,0)$) |- node[card,pos=.3,right]{(0,N)} (exc.west);
+  \draw[er] (exc.east) -- node[card,pos=.6,above]{(0,N)} (exc.east -| A.west);
+
+  \node[wrel] (hs) at (10.6,0.8) {HAS\\STATS};
+  \draw[er] (A.east) -- node[card,pos=.3,above]{(0,N)} (hs);
+  \draw[er] (hs) -- node[card,pos=.6,above]{(1,1)} (ST.west);
+
+  \node[wrel] (pr) at (1.8,-1.6) {PROPOSES};
+  \draw[er] ($(A.south)+(-1.2,0)$) |- node[card,pos=.25,left]{(0,N)} (pr.east);
+  \draw[er] (pr.west) -- node[card,pos=.5,above]{(1,1)} (C.north east);
+  \node[rel] (dp) at (1.8,-3.4) {DEPLOYS};
+  \draw[er] (A.south) |- node[card,pos=.3,right]{(0,1)} (dp.east);
+  \draw[er] (dp.west) -- node[card,pos=.5,below]{(0,1)} (C.south east);
+
+  \node[rel] (hop) at (-7.8,-2.4) {HOP};
+  \draw[er] (C.west) -- node[card,pos=.3,above]{(0,N)} (hop);
+  \draw[er] (hop.west) -- ++(-2.0,0) |- node[card,pos=.75,above]{(0,N)} ($(P.west)+(0,-0.6)$);
+  \node[font=\tiny\ttfamily,anchor=north] at (-7.8,-2.95) {\dsc{\T{ordine}{order}}};
+
+  % ---------------- legend ----------------
+  \node[note=7.8cm,anchor=north west] at (-10.6,-4.4) {%
+    \T{PHYS/SVC END = contenitori \texttt{*\_local\_qkdn}/\texttt{*\_remote\_qkdn}: \texttt{(qkdn\_id\_ref, qkdi\_id\_ref)} sono \texttt{leafref} verso un'interfaccia, quindi l'integrità referenziale è garantita dallo schema (a differenza di QKD 015). Min.\ 0 perché le foglie sono opzionali.}%
+      {PHYS/SVC END = the \texttt{*\_local\_qkdn}/\texttt{*\_remote\_qkdn} containers: \texttt{(qkdn\_id\_ref, qkdi\_id\_ref)} are \texttt{leafref}s to an interface, so referential integrity is enforced by the schema (unlike QKD 015). Min.\ 0 because the leaves are optional.}\\[2pt]
+    \T{Attributi di topology prima, di inventory dopo.}{Topology attributes first, inventory ones after.}};
+  \node[note=7.4cm,anchor=north west] at (-2.4,-4.4) {%
+    \T{MAPPED TO = \texttt{svc\_link\_and\_qkdn\_ids}; INCLUDE/EXCLUDE = liste \texttt{path\_constraints/include\_nodes} ed \texttt{exclude\_nodes}, con chiave (nodo, interfaccia); PROPOSES = \texttt{candidate\_paths/candidate\_path}; HOP = \texttt{phys\_links} (leaf-list ordinata). DEPLOYS = \texttt{deploy\_path}: copia \texttt{path\_id} e \texttt{phys\_links} del path scelto, ma lo schema non lo lega con un \texttt{leafref}.}%
+      {MAPPED TO = \texttt{svc\_link\_and\_qkdn\_ids}; INCLUDE/EXCLUDE = the \texttt{path\_constraints/include\_nodes} and \texttt{exclude\_nodes} lists, keyed by (node, interface); PROPOSES = \texttt{candidate\_paths/candidate\_path}; HOP = \texttt{phys\_links} (ordered leaf-list). DEPLOYS = \texttt{deploy\_path}: it copies \texttt{path\_id} and \texttt{phys\_links} of the chosen path, but the schema does not tie them with a \texttt{leafref}.}};
+\end{tikzpicture}

@@ -1,0 +1,48 @@
+% UML class diagram (conceptual domain model) -- ETSI GS QKD 002 V1.1.1
+\begin{tikzpicture}[x=1cm,y=1cm]
+  % --- cryptographic primitives (clause 4) ---
+  \node[cls=c002] (sec) at (0,7.6) {\textbf{SecureSystem}\nodepart{two}\T{confidenzialità, autenticità}{confidentiality, authenticity}};
+  \node[cls=c002] (enc) at (-4.2,5.6) {\st{abstract}\\\textbf{Encryption}\nodepart{two}scheme : \{OTP, AES, ...\}};
+  \node[cls=c002] (kd)  at (0,5.6) {\st{abstract}\\\textbf{KeyDistribution}\nodepart{two}};
+  \node[cls=c002] (mac) at (4.4,5.6) {\st{abstract}\\\textbf{MessageAuthentication}\nodepart{two}scheme : \{Wegman-Carter MAC,\\\ \ digital signature\}};
+  \draw[comp] (enc.north) |- node[m,pos=.1,left]{1} (sec.west);
+  \draw[comp] (kd.north) -- node[m,pos=.2,right]{1} (sec.south);
+  \draw[comp] (mac.north) |- node[m,pos=.1,right]{1} (sec.east);
+
+  % --- QKD system (clause 4) ---
+  \node[cls3=c002] (sys) at (0,2.6) {\textbf{QKDSystem}\nodepart{two}\nodepart{three}+ generateKey() : SecretKey};
+  \draw[real] (sys.north) -- (kd.south);
+  \node[cls=c002] (unit) at (-4.6,2.6) {\textbf{QKDUnit}\nodepart{two}formFactor = "19\textquotedbl{} rack"};
+  \draw[comp] (unit.east) -- node[m,pos=.15,above]{2} (sys.west);
+  \node[cls=c002] (qch) at (-4.6,0.3) {\textbf{QuantumChannel}\nodepart{two}medium : \{fibre, free-space\}\\length \textasciitilde{} 100 km};
+  \node[cls=c002] (cch) at (0,0) {\textbf{ClassicalChannel}\nodepart{two}\{authenticated\}};
+  \node[cls=c002] (pss) at (4.4,0) {\textbf{PreSharedSecret}\nodepart{two}};
+  \draw[comp] (qch.north east) -- node[m,pos=.15,below right]{1} (sys.south west);
+  \draw[comp] (cch.north) -- node[m,pos=.15,right]{1} (sys.south);
+  \draw[nav] (cch.east) -- node[rl,above]{\T{autenticato con}{authenticated by}} node[m,pos=.85,below]{1} (pss.west);
+
+  \node[cls=c002] (key) at (4.6,2.6) {\textbf{SecretKey}\nodepart{two}bits : \T{sequenza casuale}{random sequence}\\\{\T{identica ai due capi}{identical at both ends}\}};
+  \draw[nav] (sys.east) -- node[rl,above]{\T{produce}{produces}} node[m,pos=.85,below]{0..*} (key.west);
+
+  % --- key consumers (clause 6) ---
+  \node[cls=c002] (kc) at (9.4,2.6) {\st{abstract}\\\textbf{KeyConsumer}\nodepart{two}layer : \{L2, L3, L4, App\}};
+  \draw[nav] (kc.west) -- node[rl,above]{\T{consuma}{consumes}} node[m,pos=.85,below]{0..*} (key.east);
+  \node[cls=c002,minimum width=2cm] (l2) at (7.3,0.0) {\textbf{L2Consumer}\nodepart{two}PPP, MACsec,\\link encryptor};
+  \node[cls=c002,minimum width=2cm] (l3) at (9.4,-0.3) {\textbf{L3Consumer}\nodepart{two}IKE / IPsec};
+  \node[cls=c002,minimum width=2cm] (l4) at (11.5,-0.3) {\textbf{L4Consumer}\nodepart{two}TLS};
+  \node[cls=c002,minimum width=2cm] (la) at (11.8,1.2) {\textbf{AppConsumer}\nodepart{two}\T{autenticazione,}{user auth.,}\\\T{cifratura dati}{content encryption}};
+  \draw[gen] (l2.north) -- (kc.south west);
+  \draw[gen] (l3.north) -- (kc.south);
+  \draw[gen] (l4.north) -- (kc.south east);
+  \draw[gen] (la.north) -- (kc.east);
+
+  % --- network, trusted node, use case (clause 7) ---
+  \node[cls3=c002] (net) at (0,-3.0) {\textbf{QKDNetwork}\nodepart{two}configuration : \{p2p, metro,\\\ \ relay, WDM ring, PON\}\nodepart{three}};
+  \draw[agg] (sys.south east) ++(-0.2,0) to[out=-60,in=60] node[m,pos=.15,right]{1..*} (net.north east);
+  \node[cls3=c002] (tn) at (-5.2,-3.0) {\textbf{TrustedNode}\nodepart{two}secureSite : Boolean = true\nodepart{three}+ relay(a, b) : a $\oplus$ b};
+  \draw[agg] (tn.east) -- node[m,pos=.15,above]{0..*} (net.west);
+  \node[cls=c002] (uc) at (5.6,-3.0) {\textbf{UseCase}\nodepart{two}id : \{UC1..UC6\}\\goal, description\\benefits\\operationalConsiderations\\qosConsiderations};
+  \node[cls=c002] (act) at (10.4,-3.0) {\textbf{Actor}\nodepart{two}name, role};
+  \draw[assoc] (uc.east) -- node[m,pos=.85,above]{1..*} (act.west);
+  \draw[nav] (uc.west) -- node[rl,above]{\T{descrive}{describes}} node[m,pos=.8,below]{1} (net.east);
+\end{tikzpicture}

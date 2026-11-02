@@ -46,16 +46,20 @@ Prefisso `qkdnw-invt`. Non crea un albero nuovo: fa **augment** dell'albero di t
 
 | Elemento aumentato | Cosa aggiunge |
 |---|---|
-| `qkdn` | versione, capability, location, **indirizzo IP:porta del KME** (dove le applicazioni prendono le chiavi via QKD 014), stato |
-| `qkdi` | ruolo supportato, modello, tipo, punto di attacco, stato |
-| `phys_link` | `enable` (configurabile), `wavelength`, `performance` (`skr`, `eskr`, `expected_consumption` in bps e metriche fisiche come QBER e SNR), `phys_link_status` |
-| `svc_link` | `bandwidth`, `performance` (skr/eskr/consumo), **`path_restoration`** (`AUTOMATIC` o `MANUAL`, `hold_off_time` in ms), `svc_link_status` |
+| `qkdn` | `qkdn_version`, `qkdn_capabilities`, `qkdn_location_id`, **`KME_ip_port`** (`KME_ip`, `KME_port`: dove le applicazioni prendono le chiavi via QKD 014), `qkdn_status` |
+| `qkdi` | `role_support`, `qkdi_model`, `qkdi_type`, `qkdi_att_point`, `qkdi_status` |
+| `phys_link` | `enable` (configurabile), `wavelength`, `performance` (`skr`, `eskr`, `expected_consumption` in bps e la lista `phys_link_perf [type]` con QBER e SNR), `phys_link_status` |
+| `svc_link` | `bandwidth`, `performance` (skr/eskr/consumo), **`path_restoration`** (`type` = `AUTOMATIC` o `MANUAL`, `hold_off_time` in ms), `svc_link_status` |
 
 Le **notifiche** sono la parte reattiva della gestione delle risorse:
 - `sdqkdn_new`, `sdqkdn_interface_new`, `sdqkdn_phys_link_new`, `sdqkdn_svc_link_new`: un nuovo elemento è comparso;
-- `..._perf_update`: le prestazioni sono cambiate;
-- `..._overloaded`: il consumo di chiave supera la generazione;
-- `alarm` ed `event` con `severity`, per nodo, interfaccia e link.
+- `sdqkdn_phys_link_perf_update`, `sdqkdn_svc_link_perf_update`: le prestazioni sono cambiate;
+- `sdqkdn_phys_link_overloaded`, `sdqkdn_svc_link_overloaded`: il consumo di chiave supera la generazione;
+- `alarm` ed `event` con stato, messaggio e `severity`, per nodo, interfaccia, link fisico e service link.
+
+Le notifiche sullo stato del nodo elencate nella §5.5 del testo (`sdqkdn_operating`, `_down`, `_failure`, `_out`) non hanno una `notification` dedicata nel modulo: lo stato viaggia in `qkdn_status` dentro `alarm`/`event`.
+
+Nota: qui `skr`, `eskr` ed `expected_consumption` sono `rw`, mentre in QKD 015 sono `ro`.
 
 Serve a §5.2 (stato della rete e inventario delle risorse) e §5.5 (notifiche). È il modulo da cui si vede **quanta chiave è disponibile** su ogni link:
 
@@ -73,17 +77,21 @@ Prefisso `qkdnw-conn`. È il modulo **operativo**: gestisce le applicazioni che 
 connectivity_service/qkd_service/qkd_app* [app_id]
 ├── (dati app da QKD 015: basic, details, time, statistics, qos)
 └── app_mapped_svc_link
-    ├── svc_link_and_qkdn_ids   (svc link + estremi locale/remoto)
-    ├── path_constraints        (include_nodes / exclude_nodes)
-    ├── candidate_paths         (num + lista di path = sequenze di phys_link)
-    └── deploy_path             (il path scelto)
+    ├── svc_link_and_qkdn_ids   (svc_link_id_ref + estremi locale/remoto: qkdn_id_ref, qkdi_id_ref)
+    ├── path_constraints
+    │   ├── include_nodes* [qkdn_id_ref qkdi_id_ref]   (coppie nodo, interfaccia)
+    │   └── exclude_nodes* [qkdn_id_ref qkdi_id_ref]
+    ├── candidate_paths
+    │   ├── num_of_candidate_paths
+    │   └── candidate_path* [path_id]   phys_links*  (path_id = priorità del cammino)
+    └── deploy_path             (path_id + phys_links* del cammino scelto)
 ```
 
 Le **RPC** sono esattamente i passi del workflow di provisioning (§5.4 e §6.2):
 
 1. `app-registration`: registra l'applicazione nel dominio;
 2. `create-service-link-id-for-app`: crea il service link tra il nodo locale e quello remoto;
-3. `create-candidate-paths-per-service-link-for-app`: con QoS e vincoli include/exclude, il controller calcola i cammini candidati;
+3. `create-candidate-paths-per-service-link-for-app`: con QoS e vincoli include/exclude (coppie nodo, interfaccia), il controller calcola i cammini candidati;
 4. `update-candidate-paths-...`: li ricalcola, ad esempio con QoS diversa;
 5. `deploy-a-candidate-path-...`: l'orchestrator **sceglie** il `path_id` e il controller lo attiva;
 6. `delete-deployed-path-...`: rilascia il cammino.

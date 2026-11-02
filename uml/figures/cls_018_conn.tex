@@ -1,0 +1,68 @@
+% UML class diagram of etsi-qkd-sdn-connectivity (ETSI GS QKD 018 V1.1.1, Annex A, rev. 2022-02-22)
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[cls=c018] (app) at (0,7.6) {\st{list} key = app_id\\connectivity_service/qkd_service/\\\textbf{qkd_app}\nodepart{two}%
+    rw app_id : yang:uuid\\
+    ro app_status : app-status-types\\
+    rw app_type : qkd-app-types\\
+    rw server_app_id : inet:uri \quad rw client_app_id : inet:uri [0..*]\\
+    rw app_priority : uint32\\
+    ro creation_time \quad rw expiration_time : yang:date-and-time\\
+    rw app_statistics/statistics [*] (end_time, start_time, consumed_bits)\\
+    rw app_qos (max_bandwidth, min_bandwidth, jitter, ttl)};
+  \node[cls=c018] (map) at (0,3.5) {\st{container}\\\textbf{app_mapped_svc_link}\nodepart{two}};
+  \draw[comp] (map.north) -- node[m,pos=.2,right]{1} (app.south);
+
+  \node[cls=c018,anchor=north] (ids) at (-11.2,1.8) {\st{container}\\\textbf{svc_link_and_qkdn_ids}\nodepart{two}%
+    svc_link_id_ref : leafref\\
+    local_qkdn_id_ref, local_qkdi_id_ref\\
+    remote_qkdn_id_ref, remote_qkdi_id_ref};
+  \node[cls=c018,anchor=north] (pc) at (-4.6,1.8) {\st{container}\\\textbf{path_constraints}\nodepart{two}%
+    include_nodes [*] key = (qkdn_id_ref, qkdi_id_ref)\\
+    exclude_nodes [*] key = (qkdn_id_ref, qkdi_id_ref)};
+  \node[cls=c018,anchor=north] (cp) at (2.4,1.8) {\st{container}\\\textbf{candidate_paths}\nodepart{two}%
+    num_of_candidate_paths : uint32};
+  \node[cls=c018,anchor=north] (dp) at (7.6,1.8) {\st{container}\\\textbf{deploy_path}\nodepart{two}path_id : uint32\\phys_links : leafref [0..*]};
+  \node[cls=c018,anchor=north] (path) at (2.4,-1.2) {\st{list} key = path_id\\\textbf{candidate_path}\nodepart{two}%
+    path_id : uint32 \dsc{(= \T{priorità}{priority})}\\
+    phys_links : leafref [0..*]};
+  \foreach \c in {ids,pc,cp,dp} \draw[comp] (\c.north) |- node[m,pos=.1,right]{1} (map.south);
+  \draw[comp] (path.north) -- node[m,pos=.2,right]{0..*} (cp.south);
+  \draw[nav] (dp.south) |- node[rl,pos=.7,above]{\T{sceglie}{selects}} node[m,pos=.95,below]{0..1} (path.east);
+
+  % referenced topology classes (grey)
+  \node[cls=cref] (tsl) at (-11.2,-4.6) {\st{qkdnw-tplg}\\\textbf{svc_link}\nodepart{two}svc_link_id\\svc_link_local/remote_qkdn};
+  \node[cls=cref] (tqi) at (-4.6,-4.6) {\st{qkdnw-tplg}\\\textbf{qkdn / qkdi}\nodepart{two}(qkdn_id, qkdi_id)};
+  \node[cls=cref] (tpl) at (2.4,-4.6) {\st{qkdnw-tplg}\\\textbf{phys_link}\nodepart{two}phys_link_id};
+  \draw[lref] (ids.south) -- node[m,pos=.9,left]{0..1} node[rl,pos=.4,left]{svc_link_id_ref, *_qkdn/qkdi_id_ref} (tsl.north);
+  \draw[lref] (pc.south) -- node[m,pos=.9,left]{0..*} (tqi.north);
+  \draw[lref] (path.south) -- node[m,pos=.85,right]{0..* \{ordered\}} (tpl.north);
+  \draw[lref] (dp.south) ++(0.6,0) |- node[m,pos=.95,below]{0..*} (tpl.east);
+
+  % RPCs and notifications
+  \node[cls3=c018,anchor=north west] (rpc) at (6.4,10.0) {\st{interface}\\\textbf{etsi-qkd-sdn-connectivity}\nodepart{two}\st{rpc} \T{(ingresso $\to$ uscita)}{(input $\to$ output)}\nodepart{three}%
+    1 app-registration(app_id_ref, app_type, server_app_id,\\
+    \ \ client_app_id*, app_priority) $\to$ response\\
+    2 create-service-link-id-for-app(app_id_ref, local_qkdn,\\
+    \ \ remote_qkdn) $\to$ svc_link_id_ref\\
+    3 create-candidate-paths-per-service-link-for-app(app_id_ref,\\
+    \ \ app_qos, svc_link_id_ref, path_constraints) $\to$ candidate_paths\\
+    4 update-candidate-paths-per-service-link-for-app(\T{idem}{same}) $\to$ candidate_paths\\
+    5 deploy-a-candidate-path-per-service-link-for-app(app_id_ref,\\
+    \ \ svc_link_id_ref, path_id) $\to$ response, deploy_path\\
+    6 delete-deployed-path-per-service-link-for-app(app_id_ref,\\
+    \ \ svc_link_id_ref, path_id) $\to$ response, creation/expiration_time};
+  \node[cls=cref,anchor=north west] (ntf) at (12.0,3.4) {\st{notification}\\\textbf{etsi-qkd-sdn-connectivity}\nodepart{two}%
+    sdqkdn_application_new\\
+    sdqkdn_application_deployed\\
+    sdqkdn_application_qos_update\\
+    sdqkdn_application_disconnected\\
+    alarm, event (application)};
+  \draw[dep] (rpc.west |- app) -- node[rl,above]{\st{manipulates}} (app.east);
+  \node[cls=c015] (n015) at (-12.0,7.6) {\st{import}\\\textbf{etsi-qkd-sdn-node}\\\textbf{etsi-qkd-node-types}\nodepart{two}\dsc{(GS QKD 015)}};
+  \draw[dep] (app.west) -- node[rl,above,align=center]{\st{uses} app_basic, app_details,\\app_time, app_statistics, app_qos} (n015.east);
+  \node[note=6.4cm,anchor=north west] at (9.8,-0.6) {%
+    \T{RPC 1--2 popolano \texttt{qkd\_app} e \texttt{svc\_link\_and\_qkdn\_ids}; RPC 3--4 scrivono \texttt{path\_constraints} e restituiscono \texttt{candidate\_paths}; RPC 5 fissa \texttt{deploy\_path}; RPC 6 lo rilascia. \texttt{response} è un \texttt{action-result} (SUCCESS | FAIL).}%
+      {RPCs 1--2 populate \texttt{qkd\_app} and \texttt{svc\_link\_and\_qkdn\_ids}; RPCs 3--4 write \texttt{path\_constraints} and return \texttt{candidate\_paths}; RPC 5 sets \texttt{deploy\_path}; RPC 6 releases it. \texttt{response} is an \texttt{action-result} (SUCCESS | FAIL).}\\[2pt]
+    \T{\texttt{include/exclude\_nodes} referenziano coppie (nodo, interfaccia). Qui \texttt{app\_qos} ha solo 4 foglie (il grouping base, non quello aumentato di 015). Il controller \emph{propone} i path, l'orchestratore \emph{sceglie}.}%
+      {\texttt{include/exclude\_nodes} reference (node, interface) pairs. Here \texttt{app\_qos} has only 4 leaves (the base grouping, not 015's augmented one). The controller \emph{proposes} paths, the orchestrator \emph{selects}.}};
+\end{tikzpicture}

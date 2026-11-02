@@ -1,0 +1,81 @@
+% UML class diagram of etsi-qkd-sdn-topology (green) augmented by etsi-qkd-sdn-inventory (red)
+% ETSI GS QKD 018 V1.1.1, Annex A (YANG rev. 2022-02-22), checked with pyang -f tree
+\begin{tikzpicture}[x=1cm,y=1cm]
+  % ---------------- topology ----------------
+  \node[cls=c018] (net) at (3.2,10.4) {\st{container}\\\textbf{qkd_network}\nodepart{two}\dsc{(\T{radice del modulo}{module root} qkdnw-tplg)}};
+  \node[cls=c018] (qkdn) at (-3.0,7.1) {\st{list} key = qkdn_id\\\textbf{qkdn}\nodepart{two}rw qkdn_id : yang:uuid};
+  \node[cls=c018] (qkdi) at (-3.0,3.6) {\st{list} key = qkdi_id\\\textbf{qkdi}\nodepart{two}rw qkdi_id : uint32};
+  \node[cls=c018] (pl) at (3.4,7.1) {\st{list} key = phys_link_id\\\textbf{phys_link}\nodepart{two}rw phys_link_id : yang:uuid\\rw link_type : qkd-link-types [0..1]};
+  \node[cls=c018] (sl) at (10.0,7.1) {\st{list} key = svc_link_id\\\textbf{svc_link}\nodepart{two}rw svc_link_id : yang:uuid\\rw link_type : qkd-link-types [0..1]};
+  \node[cls=c018] (ep) at (6.7,3.4) {\st{container} \dsc{(grouping qkdn_qkdi_id_ref)}\\\textbf{phys_link_local_qkdn / phys_link_remote_qkdn}\\\textbf{svc_link_local_qkdn / svc_link_remote_qkdn}\nodepart{two}%
+    rw qkdn_id_ref : leafref [0..1]\\
+    rw qkdi_id_ref : leafref [0..1]};
+
+  \draw[comp] (qkdn.north) |- node[m,pos=.1,left]{0..*} node[rl,pos=.7,above]{sdqkd_nodes/qkdn} (net.west);
+  \draw[comp] (qkdi.north) -- node[m,pos=.15,left]{0..*} node[rl,pos=.5,right]{qkd_interfaces/qkdi} (qkdn.south);
+  \draw[comp] (pl.north) -- node[m,pos=.15,left]{0..*} node[rl,pos=.5,left,align=right]{qkd_links/\\qkd_phys_links/phys_link} (pl.north |- net.south);
+  \draw[comp] (sl.north) |- node[m,pos=.1,right]{0..*} node[rl,pos=.7,above]{qkd_links/qkd_svc_links/svc_link} (net.east);
+  \coordinate (e1) at ($(ep.north)+(-1.6,0)$); \coordinate (e2) at ($(ep.north)+(1.6,0)$);
+  \draw[comp] (e1) -- node[m,pos=.15,left]{2} node[rl,pos=.55,left]{local, remote} (e1 |- pl.south);
+  \draw[comp] (e2) -- node[m,pos=.15,right]{2} node[rl,pos=.55,right]{local, remote} (e2 |- sl.south);
+  % leafrefs
+  \coordinate (e3) at ($(ep.west)+(0,-0.3)$); \coordinate (e4) at ($(ep.west)+(0,0.3)$);
+  \draw[lref] (e3) -- node[rl,above,pos=.8]{\st{leafref} qkdi_id_ref} node[m,pos=.95,below]{0..1} (e3 -| qkdi.east);
+  \draw[lref] (e4) -| ($(qkdn.east)+(1.0,-0.15)$) -- node[rl,above,pos=.5]{\st{leafref}} node[m,pos=.85,below]{0..1} ($(qkdn.east)+(0,-0.15)$);
+  \node[rl,green!40!black,anchor=west] at ($(qkdn.east)+(1.05,-1.2)$) {qkdn_id_ref};
+
+  % ---------------- inventory (augment) ----------------
+  \node[cls=cinv] (iqkdn) at (-10.2,7.1) {\st{augment} qkdnw-invt\\\textbf{qkdn (inventory)}\nodepart{two}%
+    rw qkdn_version : string [0..1]\\
+    rw qkdn_capabilities\\
+    \ \ link_stats_support : boolean\\
+    \ \ application_stats_support : boolean\\
+    \ \ key_relay_mode_enable : boolean\\
+    rw qkdn_location_id : string [0..1]\\
+    rw KME_ip_port\\
+    \ \ KME_ip : inet:ip-address\\
+    \ \ KME_port : inet:port-number\\
+    ro qkdn_status : qkdn-status-types};
+  \node[cls=cinv] (iqkdi) at (-10.2,2.6) {\st{augment} qkdnw-invt\\\textbf{qkdi (inventory)}\nodepart{two}%
+    rw role_support : qkd-role-types\\
+    rw qkdi_model : string\\
+    rw qkdi_type : qkd-technology-types\\
+    rw qkdi_att_point (device, port)\\
+    ro qkdi_status : iface-status-types};
+  \node[cls=cinv,anchor=north] (ipl) at (2.4,1.5) {\st{augment} qkdnw-invt\\\textbf{phys_link (inventory)}\nodepart{two}%
+    rw enable : boolean\\
+    rw wavelength : wavelength\\
+    rw performance\\
+    \ \ expected_consumption, skr, eskr : uint32\\
+    \ \ ro phys_link_perf [*] key = type\\
+    \ \ \ \ type : phys-perf-types \{QBER | SNR\}\\
+    \ \ \ \ value : decimal64\\
+    ro phys_link_status : link-status-types};
+  \node[cls=cinv,anchor=north] (isl) at (10.0,1.5) {\st{augment} qkdnw-invt\\\textbf{svc_link (inventory)}\nodepart{two}%
+    rw bandwidth : uint32 \dsc{(bps)}\\
+    rw performance\\
+    \ \ expected_consumption, skr, eskr : uint32\\
+    rw path_restoration\\
+    \ \ type : path-restoration-type\\
+    \ \ \ \ \{AUTOMATIC | MANUAL\}\\
+    \ \ hold_off_time : uint32 \dsc{(ms)}\\
+    ro svc_link_status : link-status-types};
+  \draw[dep] (iqkdn.east |- qkdn) -- node[rl,above]{\st{augment}} (qkdn.west);
+  \draw[dep] (iqkdi.east |- qkdi) -- node[rl,above]{\st{augment}} (qkdi.west);
+  \draw[dep] (ipl.north) -- node[rl,pos=.3,left]{\st{augment}} (ipl.north |- pl.south);
+  \coordinate (e5) at ($(isl.north)+(1.0,0)$); \draw[dep] (e5) -- node[rl,pos=.3,right]{\st{augment}} (e5 |- sl.south);
+
+  % ---------------- notifications ----------------
+  \node[cls=cref,anchor=north west] (ntf) at (-13.4,-0.6) {\st{notification}\\\textbf{etsi-qkd-sdn-inventory}\nodepart{two}%
+    sdqkdn_new \quad sdqkdn_interface_new\\
+    sdqkdn_phys_link_new \quad sdqkdn_svc_link_new\\
+    sdqkdn_phys_link_perf_update \quad sdqkdn_svc_link_perf_update\\
+    sdqkdn_phys_link_overloaded \quad sdqkdn_svc_link_overloaded\\
+    alarm / event (qkdn | interface | phys_link | svc_link:\\
+    \ \ status, message, severity)};
+  \node[note=7.4cm,anchor=north west] at (-13.4,-3.6) {%
+    \T{Verde: \texttt{etsi-qkd-sdn-topology} (solo struttura). Rosso: \texttt{etsi-qkd-sdn-inventory}, che non crea nuovi nodi ma fa \texttt{augment} di quelli esistenti, riusando i grouping di QKD 015. Frecce verdi = \texttt{leafref}: \texttt{qkdi\_id\_ref} punta a un'interfaccia \emph{del nodo} indicato da \texttt{qkdn\_id\_ref}.}%
+      {Green: \texttt{etsi-qkd-sdn-topology} (structure only). Red: \texttt{etsi-qkd-sdn-inventory}, which creates no new nodes but \texttt{augment}s the existing ones, reusing QKD 015 groupings. Green arrows = \texttt{leafref}s: \texttt{qkdi\_id\_ref} points to an interface \emph{of the node} named by \texttt{qkdn\_id\_ref}.}\\[2pt]
+    \T{A differenza di 015, qui \texttt{skr}, \texttt{eskr} ed \texttt{expected\_consumption} sono \texttt{rw}.}%
+      {Unlike 015, \texttt{skr}, \texttt{eskr} and \texttt{expected\_consumption} are \texttt{rw} here.}};
+\end{tikzpicture}
