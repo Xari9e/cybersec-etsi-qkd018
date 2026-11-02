@@ -33,8 +33,22 @@
 
 \input{abstract/abstract}
 
+% blank page after the abstract
+\clearpage
+\thispagestyle{empty}
+\null
+\clearpage
+
 \tableofcontents
-\bigskip
+
+% list of figures and acronyms, each on a new page
+\clearpage
+\phantomsection
+\addcontentsline{toc}{section}{\listfigurename}
+\listoffigures
+
+\clearpage
+\input{chapters/00_acronyms}
 
 \input{chapters/01_state_of_the_art}
 \input{chapters/02_introduction}
@@ -47,6 +61,7 @@
 \input{chapters/09_real_deployments}
 \input{chapters/10_conclusions}
 
+\clearpage
 \printbibliography[heading=bibintoc,title={References}]
 
 \end{document}

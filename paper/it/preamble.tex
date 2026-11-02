@@ -37,6 +37,10 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{xurl}
 
+% ogni sezione inizia su una pagina nuova
+\usepackage{etoolbox}
+\pretocmd{\section}{\clearpage}{}{}
+
 \setlist{itemsep=2pt,topsep=4pt}
 \setlength{\parskip}{3pt}
 \setlength{\emergencystretch}{2em}

@@ -33,8 +33,22 @@
 
 \input{abstract/abstract}
 
+% pagina bianca dopo l'abstract
+\clearpage
+\thispagestyle{empty}
+\null
+\clearpage
+
 \tableofcontents
-\bigskip
+
+% elenco delle figure e acronimi, ciascuno su pagina nuova
+\clearpage
+\phantomsection
+\addcontentsline{toc}{section}{\listfigurename}
+\listoffigures
+
+\clearpage
+\input{chapters/00_acronimi}
 
 \input{chapters/01_stato_arte}
 \input{chapters/02_introduzione}
@@ -47,6 +61,7 @@
 \input{chapters/09_casi_reali}
 \input{chapters/10_conclusioni}
 
+\clearpage
 \printbibliography[heading=bibintoc,title={Bibliografia}]
 
 \end{document}
