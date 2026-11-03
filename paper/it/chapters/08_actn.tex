@@ -1,0 +1,39 @@
+% =====================================================================
+\section{L'analogia con ACTN (RFC 8453)}
+\label{sec:actn}
+% =====================================================================
+
+La GS~QKD~018 non inventa un modello nuovo: applica alla QKD un pattern già
+standard nelle reti di trasporto, il framework ACTN
+(\emph{Abstraction and Control of TE Networks}) dell'IETF~\cite{rfc8453}.
+ACTN prevede tre livelli: il \emph{Customer Network Controller} (CNC), il
+\emph{Multi-Domain Service Coordinator} (MDSC) e i \emph{Provisioning
+Network Controller} (PNC) di ciascun dominio, collegati dalle interfacce
+CMI (CNC–MDSC) e MPI (MDSC–PNC). La corrispondenza con la GS~QKD~018 è
+diretta (Tab.~\ref{tab:actn}).
+
+\begin{table}[h]
+\centering\small
+\caption{Corrispondenza tra ACTN e la pila ETSI per la QKD.}
+\label{tab:actn}
+\begin{tabularx}{\textwidth}{@{}l l L@{}}
+\toprule
+\textbf{ACTN} & \textbf{ETSI QKD} & \textbf{Osservazione} \\
+\midrule
+CNC & amministratore / portale cliente & origina la richiesta di servizio \\
+MDSC & SDN orchestrator & vista multi-dominio, decisione del cammino \\
+PNC & SDN controller del dominio QKD & calcola i candidati, attiva i cammini \\
+MPI & interfaccia GS~QKD~018 & topologia astratta, provisioning, notifiche \\
+SBI & interfaccia GS~QKD~015 & controllo dei singoli nodi \\
+TE topology astratta & \texttt{etsi-qkd-sdn-topology} & vista vendor-neutral \\
+banda TE & SKR / ESKR & la risorsa da allocare è la chiave \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La differenza sostanziale sta nella risorsa. In ACTN la banda di un link è
+fissata dalla capacità del canale; in QKD l'SKR fluttua con le condizioni
+fisiche e la chiave si accumula in buffer finiti, da cui viene consumata.
+Per questo nella 018 notifiche come \texttt{\_perf\_update} e
+\texttt{\_overloaded} e la politica di \texttt{path\_restoration} hanno un
+ruolo più centrale che nelle reti di trasporto classiche.

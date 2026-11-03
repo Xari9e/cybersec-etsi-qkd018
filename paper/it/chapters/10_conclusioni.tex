@@ -1,0 +1,49 @@
+% =====================================================================
+\section{Limiti e prospettive}
+\label{sec:limiti}
+% =====================================================================
+
+\begin{itemize}
+  \item \textbf{Adozione.} La 015 è usata in reti reali, la 018 quasi solo
+        in testbed e prototipi~\cite{madqci2024}.
+  \item \textbf{Multi-dominio incompleto.} Lo scenario normativo è
+        QKD$+$OTN; il caso QKD$+$QKD richiede estensioni come quelle di
+        Sim et al.\ e il coordinamento con la GS~QKD~020 per il passaggio
+        delle chiavi tra KMS.
+  \item \textbf{Metriche.} L'ESKR è un indicatore istantaneo e non tiene
+        conto della chiave già accumulata nei buffer né della sua
+        dinamica. Laschet et al.~\cite{laschet2026} propongono indicatori
+        più ricchi per la selezione dei cammini.
+  \item \textbf{Riservatezza della topologia.} Esporre la topologia
+        interna all'orchestrator è accettabile dentro un operatore, meno
+        tra operatori diversi; servono schemi di instradamento inter-dominio
+        che preservino la riservatezza~\cite{laschet2026,interconnect2026}.
+  \item \textbf{Sicurezza dell'interfaccia.} Lo standard non specifica i
+        meccanismi di protezione del canale orchestrator–controller, che
+        restano a carico dell'implementazione.
+  \item \textbf{Algoritmi.} Il calcolo dei cammini non è standardizzato:
+        è un vantaggio per l'innovazione~\cite{routing2024,mendez2026}, ma
+        rende meno prevedibile il comportamento in scenari multi-vendor.
+\end{itemize}
+
+% =====================================================================
+\section{Conclusioni}
+\label{sec:conclusioni}
+% =====================================================================
+
+Letta in sequenza, la produzione ETSI sul controllo della QKD ha una
+logica chiara. La GS~QKD~002 ha mostrato che la QKD utile è una rete, con
+gestione delle chiavi, requisiti di servizio differenziati e integrazione
+nella rete ottica dell'operatore. La GS~QKD~015 ha risposto con
+l'astrazione del nodo SD-QKD: moduli come interfacce, un key manager unico,
+link fisici e virtuali, applicazioni con QoS, un controller che registra,
+pianifica e configura, tutto descritto in YANG. La GS~QKD~018 ha aggiunto
+il livello di orchestrazione: ogni dominio diventa un grafo astratto, le
+risorse di chiave vengono monitorate tramite l'inventario e il provisioning
+segue uno schema in cui il controller propone e l'orchestrator decide. Il
+disegno ricalca ACTN, riusa YANG, NETCONF e RESTCONF e mantiene il principio
+di sicurezza essenziale: le chiavi non lasciano mai i nodi. Le esperienze di
+KOREN, del Politecnico di Milano e di MadQCI mostrano che lo schema funziona
+ma che l'orchestrazione QKD è ancora giovane. Il passo successivo è
+estenderla davvero al multi-operatore, con metriche migliori e garanzie di
+riservatezza tra domini.

@@ -1,0 +1,144 @@
+% =====================================================================
+\section{ETSI GS QKD 018}
+\label{sec:qkd018}
+% =====================================================================
+
+GS~QKD~018 (V1.1.1, April 2022)~\cite{qkd018} defines the
+\emph{orchestration interface} between an SDN orchestrator and the SDN
+controller of a QKD network. The controller acts as \emph{server}, the
+orchestrator as \emph{client}; the information model is expressed in YANG
+and is vendor-independent. In SDN terms it is the \emph{northbound
+interface} of the QKD controller, i.e.\ the exact complement of
+GS~QKD~015. The overall hierarchy becomes:
+\begin{center}
+\small
+orchestrator $\xrightarrow{\text{QKD 018}}$ controller
+$\xrightarrow{\text{QKD 015}}$ SDN agent / SD-QKD node
+$\xrightarrow{\text{QKD 004/014}}$ SAE.
+\end{center}
+
+\begin{definition}[SDN orchestration]
+\emph{SDN orchestration} is the continuous process by which available
+resources are automatically coordinated, according to optimisation
+criteria, to establish and release end-to-end services that span several
+network domains, each governed by its own SDN
+controller~\cite[§4.2]{qkd018}.
+\end{definition}
+
+\begin{definition}[Service link]
+A \emph{service link} is a logical key association link between two QKD
+nodes, realised by one or more physical QKD links (single-hop or
+multi-hop). At the orchestration level it corresponds to the virtual link
+of GS~QKD~015.
+\end{definition}
+
+\input{figures/scenario_018}
+
+% ---------------------------------------------------------------------
+\subsection{GS QKD 018 use cases}
+\label{sec:usecase018}
+
+The use case behind the standard (§4.1) takes up almost literally the
+backbone problem of GS~QKD~002. An operator introducing QKD can either let
+quantum and classical channels coexist in the same fibre or keep them
+separate. Coexistence is hard for two reasons: the optical powers of
+classical channels are many orders of magnitude higher and disturb the
+quantum channel, and the reachable distances of the two kinds of channel
+are very different. In a fibre-rich environment the operator may therefore
+choose a QKD network separate from the optical transport network (OTN),
+gaining performance, isolation and separation of responsibilities.
+Following the SDN paradigm, the two networks are governed by different
+controllers.
+
+This creates a coordination problem: the SAEs that need to encrypt traffic
+sit in OTN nodes, keys are generated in QKD nodes, and each controller knows
+only its own network. The orchestrator solves three issues:
+
+\begin{enumerate}
+  \item \textbf{Address matching}: it pairs the address of the OTN node that
+        must receive keys with that of the QKD node that supplies them; the
+        two are inside the same security perimeter (Fig.~\ref{fig:scenario});
+  \item \textbf{end-to-end provisioning}: it translates a customer request
+        into the configuration of the individual domains, chooses the domains
+        to traverse and coordinates the paths;
+  \item \textbf{management}: it collects the topology, key-resource
+        inventory and FCAPS information of each domain.
+\end{enumerate}
+
+Generalising, the same scheme makes it possible to orchestrate
+\emph{several QKD domains from different vendors}, each behind its own
+controller, as well as QKD and classical domains together. The standard
+also points out a practical advantage: an operator that already has an
+orchestrator for its optical networks can integrate the QKD network without
+introducing separate management tools, which is exactly the integrated
+management requirement of UC4.
+
+The functions required of the orchestrator (§4.2) are:
+\begin{itemize}
+  \item translating customer service requests into domain configuration and
+        SAE allocation;
+  \item requesting establishment and release of services, including
+        inter-domain connections;
+  \item computing multi-domain paths, with inter-domain connections and
+        endpoints;
+  \item changing paths under operator constraints;
+  \item discovering the nodes and links of each controller and keeping an
+        abstract view of them;
+  \item monitoring the key resources available on nodes and links;
+  \item monitoring FCAPS management and receiving its notifications.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\subsection{The information model}
+\label{sec:infomodel}
+
+Clause 5 translates these functions into five information blocks.
+
+\paragraph{Topology discovery (§5.1).}
+The controller exposes SD-QKD nodes, interfaces and physical links, and
+later service links. The orchestrator does not need the full physical
+composition, but an \emph{abstract} view of each domain and of the
+connectivity between domains. Discovery can be \emph{proactive} (the
+orchestrator queries the controller before every new path computation) or
+\emph{reactive} (the controller notifies every change, e.g.\ a node added
+or removed).
+
+\paragraph{Network status and inventory (§5.2).}
+For each node and physical link the controller exposes status, physical
+performance and above all key resources: the generation rate and the rate
+available after internal consumption. Service links add bandwidth,
+available key and the restoration policy in case of failure.
+
+\paragraph{End-to-end service status (§5.3).}
+The orchestrator can query the active external applications, the local and
+remote nodes and the service links that serve them, with their status and
+key rate.
+
+\paragraph{Provisioning with path computation (§5.4).}
+The orchestrator asks the controller for paths that satisfy given
+constraints; the controller returns a list of candidates, possibly several
+times with different constraints, until the orchestrator picks one to
+deploy. In case of failure the orchestrator can request the path to be
+replaced.
+
+\paragraph{Notifications (§5.5).}
+The controller reports events, alarms and threshold crossings. Performance
+thresholds (QBER, SKR, ESKR) are configurable by the orchestrator. Compared
+with 015, notifications are added for node status (\texttt{sdqkdn\_new},
+\texttt{\_operating}, \texttt{\_down}, \texttt{\_failure},
+\texttt{\_out}), for deployed applications
+(\texttt{sdqkdn\_application\_deployed}) and for service links
+(\texttt{sdqkdn\_svc\_link\_down}, \texttt{\_perf\_update},
+\texttt{\_overloaded}).
+
+Equation~\eqref{eq:eskr015} extends naturally to the orchestration level.
+Since in a multi-hop path $p$ every link relays the same key, a new service
+with demand $r$ is sustainable only if the bottleneck can carry it:
+\begin{equation}
+  p \text{ admissible} \iff
+  \min_{\ell\in p}\, \mathrm{ESKR}_\ell \;\ge\; r .
+  \label{eq:admissible}
+\end{equation}
+This too is our own formalisation, consistent with the \texttt{skr},
+\texttt{eskr} and \texttt{expected\_consumption} fields of the YANG models;
+the standard does not prescribe any path-computation algorithm.

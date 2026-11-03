@@ -1,0 +1,39 @@
+% =====================================================================
+\section{The analogy with ACTN (RFC 8453)}
+\label{sec:actn}
+% =====================================================================
+
+GS~QKD~018 does not invent a new model: it applies to QKD a pattern that is
+already standard in transport networks, the IETF ACTN framework
+(\emph{Abstraction and Control of TE Networks})~\cite{rfc8453}. ACTN has
+three levels: the \emph{Customer Network Controller} (CNC), the
+\emph{Multi-Domain Service Coordinator} (MDSC) and the per-domain
+\emph{Provisioning Network Controllers} (PNC), connected by the CMI
+(CNC–MDSC) and MPI (MDSC–PNC) interfaces. The mapping to GS~QKD~018 is
+direct (Table~\ref{tab:actn}).
+
+\begin{table}[h]
+\centering\small
+\caption{Mapping between ACTN and the ETSI QKD stack.}
+\label{tab:actn}
+\begin{tabularx}{\textwidth}{@{}l l L@{}}
+\toprule
+\textbf{ACTN} & \textbf{ETSI QKD} & \textbf{Remark} \\
+\midrule
+CNC & administrator / customer portal & originates the service request \\
+MDSC & SDN orchestrator & multi-domain view, path decision \\
+PNC & SDN controller of the QKD domain & computes candidates, activates paths \\
+MPI & GS~QKD~018 interface & abstract topology, provisioning, notifications \\
+SBI & GS~QKD~015 interface & control of individual nodes \\
+abstract TE topology & \texttt{etsi-qkd-sdn-topology} & vendor-neutral view \\
+TE bandwidth & SKR / ESKR & the resource to allocate is key \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The essential difference lies in the resource. In ACTN the bandwidth of a
+link is fixed by the channel capacity; in QKD the SKR fluctuates with
+physical conditions and key accumulates in finite buffers from which it is
+consumed. This is why in 018 notifications such as \texttt{\_perf\_update}
+and \texttt{\_overloaded} and the \texttt{path\_restoration} policy play a
+more central role than in classical transport networks.

@@ -1,0 +1,1011 @@
+% =====================================================================
+%  Slide: ETSI GS QKD 018, orchestrazione SDN di reti QKD multi-dominio
+%  ---------------------------------------------------------------------
+%  COMPILAZIONE (pdfLaTeX normale; anche XeLaTeX/LuaLaTeX, con Cambria Math):
+%      latexmk -pdf main.tex
+%  oppure, a mano:
+%      pdflatex main.tex ; biber main ; pdflatex main.tex ; pdflatex main.tex
+%  Le figure TikZ in figures/ sono quelle del paper (paper/it/figures),
+%  senza l'ambiente figure, ridimensionate con \slidefig.
+% =====================================================================
+\documentclass[10pt]{beamer}
+\input{preamble}
+
+\title[ETSI GS QKD 018]{Orchestrazione SDN di reti QKD multi-dominio}
+\subtitle{L'interfaccia ETSI GS QKD 018}
+\author[D.~Carro, F.~E.~Bucci]{Diego Carro \and Bucci Felice Elia}
+\institute[PoliTo]{Corso di Cybersecurity, Politecnico di Torino\\Quantum Engineering}
+\date{Novembre 2026}
+
+\begin{document}
+
+% ---------------------------------------------------------------------
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{Indice}
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+% =====================================================================
+\section[Introduzione]{Introduzione: dalla QKD alla rete}
+% =====================================================================
+
+\subsection{Motivazione}
+
+\begin{frame}{Il problema}
+  \begin{itemize}
+    \item La QKD permette a due parti di concordare una chiave segreta con
+          sicurezza fondata sulla \alert{fisica}, non sulla difficoltà
+          computazionale.
+    \item Portarla in una rete di operatore significa gestirla come
+          qualunque altra \alert{risorsa di rete}:
+          \begin{itemize}
+            \item scoprirne la topologia e monitorarne lo stato;
+            \item allocarne la capacità ai servizi;
+            \item coordinarla con la rete ottica classica.
+          \end{itemize}
+    \item L'ETSI ISG QKD ha affrontato il problema per gradi:
+  \end{itemize}
+  \vspace{1ex}
+  \begin{center}
+  \begin{tikzpicture}[node distance=4mm,
+      st/.style={draw,rounded corners,fill=blue!5,align=center,
+                 font=\footnotesize,minimum height=11mm,text width=2.75cm}]
+    \node[st] (a) {\textbf{GS QKD 002}\\casi d'uso e requisiti};
+    \node[st,right=of a] (b) {\textbf{GS QKD 015}\\controller SDN $\leftrightarrow$ nodi};
+    \node[st,right=of b,fill=orange!15] (c) {\textbf{GS QKD 018}\\orchestrator $\leftrightarrow$ controller};
+    \draw[->,thick] (a) -- (b);
+    \draw[->,thick] (b) -- (c);
+  \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Stato dell'arte in breve}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{block}{Fondamenti e reti}
+        \begin{itemize}
+          \item Review dei protocolli e delle prove di sicurezza~\cite{pirandola2020}
+          \item Dal link alla rete: strati, trusted relay,
+                instradamento~\cite{mehic2020,cao2022,routing2024}
+        \end{itemize}
+      \end{block}
+      \begin{block}{Standard}
+        \begin{itemize}
+          \item ETSI: casi d'uso~\cite{qkd002}, API~\cite{qkd004,qkd014},
+                SDN~\cite{qkd015}, orchestrazione~\cite{qkd018}, KMS~\cite{qkd020}
+          \item ITU-T Y.3800: architettura, controllo, SDN~\cite{ituy3800,ituy3804,ituy3805}
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{block}{SDN e orchestrazione}
+        \begin{itemize}
+          \item Primi esperimenti SDN + QKD (UPM/Telefónica)~\cite{aguado2016,aguado2020}
+          \item KOREN multi-vendor (SK Telecom)~\cite{sim2023}
+          \item Prototipo gerarchico ONOS (PoliMi)~\cite{vicario2025}
+          \item MadQCI, Madrid~\cite{madqci2024}
+        \end{itemize}
+      \end{block}
+      \begin{exampleblock}{Contributo}
+        Lettura unitaria della catena 002 $\to$ 015 $\to$ 018: dai
+        requisiti ai modelli YANG all'orchestrazione multi-dominio.
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{QKD e trusted node}
+
+\begin{frame}{La distribuzione quantistica di chiavi}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \textbf{BB84 in quattro passi}
+      \begin{enumerate}
+        \item Alice codifica bit casuali su singoli fotoni, in una di due
+              basi scelte a caso.
+        \item Bob misura in una base casuale.
+        \item Su un canale classico \alert{autenticato} confrontano le basi
+              (\emph{sifting}).
+        \item Correzione d'errore e \emph{privacy amplification}
+              distillano la chiave.
+      \end{enumerate}
+      \vspace{1ex}
+      Un intercettatore introduce errori misurabili:
+      \[
+        \mathrm{QBER} = \frac{N_{\text{errori}}}{N_{\text{sifted}}}
+        \lesssim 11\% \ \text{(BB84)}
+      \]
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Ciò che interessa alla rete}
+        Il \emph{secret key rate} (SKR), in bit/s, cala con la distanza:
+        \[
+          \eta = 10^{-\alpha L/10}
+        \]
+        con \(\alpha \approx 0{,}2\)~dB/km.
+      \end{block}
+      \begin{alertblock}{Due osservazioni}
+        \begin{itemize}
+          \item La QKD \emph{distribuisce} chiavi, non cifra né autentica.
+          \item Serve un segreto iniziale: è \emph{key growing}.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Dal link alla rete: il trusted node}
+  \begin{columns}[c]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Un link copre al più qualche centinaio di km; non esistono
+              ancora ripetitori quantistici pratici.
+        \item Le reti reali collegano i link in serie tramite
+              \alert{nodi fidati}.
+        \item Ogni hop è un one-time pad, ma $K$ è in chiaro dentro ogni
+              nodo intermedio.
+        \item Il relay \alert{consuma chiave}: ogni link $\ell\in p$ spende
+              $|K|$ bit. La chiave diventa una risorsa da pianificare.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{center}\begin{adjustbox}{max width=\linewidth}
+      \begin{tikzpicture}[scale=0.85,
+          nd/.style={draw,circle,fill=green!12,minimum size=10mm,font=\small}]
+        \node[nd] (A) at (0,0) {$A$};
+        \node[nd,fill=orange!20] (B) at (2.6,0) {$B$};
+        \node[nd] (C) at (5.2,0) {$C$};
+        \draw[thick] (A) -- node[above,font=\scriptsize]{$K_{AB}$} (B);
+        \draw[thick] (B) -- node[above,font=\scriptsize]{$K_{BC}$} (C);
+        \node[font=\scriptsize,align=center] at (1.3,-1.0) {$c = K\oplus K_{AB}$};
+        \node[font=\scriptsize,align=center] at (3.9,-1.0) {$c' = K\oplus K_{BC}$};
+        \node[font=\scriptsize,align=center,red!70!black] at (2.6,1.1)
+             {$K = c\oplus K_{AB}$};
+      \end{tikzpicture}
+      \end{adjustbox}\end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{Architettura e SDN}
+
+\begin{frame}{L'architettura a strati ITU-T Y.3800}
+  \slidefig[0.55\textheight]{itu_strati}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{QKD link}: due moduli QKD, dove la chiave è \emph{generata}.\\
+      \textbf{KM link}: due key manager, dove la chiave è \emph{inoltrata}.
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{QKDN controller}: decide in tempo reale (cammini, link).\\
+      \textbf{QKDN manager}: supervisiona (FCAPS, politiche).
+    \end{column}
+  \end{columns}
+  \source{Adattata da ITU-T Y.3800~\cite{ituy3800}}
+\end{frame}
+
+\begin{frame}{Software-Defined Networking}
+  \begin{columns}[c]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item SDN separa \emph{piano dati}, \emph{piano di controllo}
+              (controller con vista globale) e \emph{piano applicativo}~\cite{kreutz2015}.
+        \item Il controller parla ai dispositivi con la \alert{SBI} e offre
+              servizi verso l'alto con la \alert{NBI}.
+        \item Con più domini si aggiunge un \alert{orchestrator}.
+      \end{itemize}
+      \vspace{1ex}
+      \small Una rete QKD ha tutto ciò che rende utile SDN: risorse scarse
+      e variabili, vincoli fisici, apparati multi-vendor, domanda che cambia.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{center}
+      \begin{tikzpicture}[node distance=8mm]
+        \node[box,fill=blue!8,minimum width=3.6cm] (o) {Orchestrator};
+        \node[box,fill=green!8,minimum width=3.6cm,below=of o] (c) {Controller};
+        \node[box,fill=gray!8,minimum width=3.6cm,below=of c] (d) {Dispositivi};
+        \draw[<->,thick] (o) -- node[right,font=\scriptsize]{NBI\quad(QKD 018)} (c);
+        \draw[<->,thick] (c) -- node[right,font=\scriptsize]{SBI\quad(QKD 015)} (d);
+      \end{tikzpicture}
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\subsection{GS QKD 002}
+% =====================================================================
+
+\begin{frame}{GS QKD 002 (2010): dove serve la QKD}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Una primitiva tra tre}
+        Un sistema sicuro richiede \emph{cifratura}, \emph{distribuzione
+        delle chiavi}, \emph{autenticazione}. La QKD copre \alert{solo la
+        seconda}: è un complemento, non un sostituto, della crittografia
+        classica (OTP/AES, MAC Wegman–Carter).
+      \end{block}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Dove si consuma la chiave}
+      \begin{description}\small
+        \item[L2] PPP, MACsec, QKD link encryptor
+        \item[L3] IKE modificato per IPsec
+        \item[L4] chiavi di sessione TLS, HMAC
+        \item[L7] autenticazione e cifratura applicativa
+      \end{description}
+      \small In ogni caso c'è chi \emph{consuma} e chi \emph{fornisce}
+      chiavi: la futura separazione \alert{SAE / KME}.
+    \end{column}
+  \end{columns}
+  \source{\cite{qkd002}}
+\end{frame}
+
+\begin{frame}{I sei casi d'uso}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{@{}l L L@{}}
+    \toprule
+    \textbf{Caso} & \textbf{Configurazione} & \textbf{Esigenza che anticipa} \\
+    \midrule
+    UC1 Backup & link punto-punto + cifratore di linea & interfaccia chiave–cifratore \\
+    UC2 Metro aziendale & più link, server di chiavi & QoS per applicazione \\
+    UC3 Infrastrutture critiche & rete con key relay e gestione integrata & KMS, ridondanza, controllo centralizzato \\
+    UC4 Backbone & canale quantistico in WDM & coesistenza con la rete ottica, gestione integrata \\
+    UC5 Accesso PON & punto-multipunto & condivisione della capacità di chiave \\
+    UC6 Long-haul & relay tramite nodo mobile (satellite) & trusted node, ridondanza \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{1ex}
+  \footnotesize
+  \begin{exampleblock}{Che cosa lascia in eredità}
+    La QKD utile è una \emph{rete}: gestione delle chiavi (UC3, UC6) e QoS
+    differenziata (UC2) $\Rightarrow$ \textbf{GS QKD 015}; integrazione con
+    la rete ottica dell'operatore (UC4) $\Rightarrow$ \textbf{GS QKD 018}.
+  \end{exampleblock}
+\end{frame}
+
+% =====================================================================
+\section[GS QKD 015]{ETSI GS QKD 015: il controller SDN}
+% =====================================================================
+
+\subsection{Componenti}
+
+\begin{frame}{Perché un controllo software-defined}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \begin{alertblock}{Oggi: integrazione manuale}
+        \begin{itemize}
+          \item ogni sistema installato a mano su fibra scura dedicata;
+          \item non scala;
+          \item la capacità di chiave non si sposta dove serve;
+          \item non dialoga con la rete ottica.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Obiettivi dell'astrazione}
+        \begin{itemize}
+          \item gestione centrale delle risorse QKD;
+          \item un'unica gestione delle chiavi per perimetro;
+          \item parametri di basso livello delegati al nodo;
+          \item link distribuiti secondo la QoS;
+          \item coordinamento di canali quantistici e classici.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{1ex}
+  \centering\small GS QKD 015 V2.1.1 (2022)~\cite{qkd015}: la \alert{southbound
+  interface} del piano di controllo QKD, allineata alla 018.
+\end{frame}
+
+\begin{frame}{Le componenti di una rete SD-QKD}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{description}[Interfaccia QKD]
+        \item[Modulo QKD] hardware + software, specifico del vendor
+        \item[Interfaccia QKD] \texttt{qkdi}: vista astratta di un modulo
+              (tecnologia, modello, $\lambda$, attacco ottico)
+        \item[Nodo SD-QKD] moduli nello stesso luogo sicuro, un solo
+              \emph{SDN agent}, un key manager, un punto di accesso alle chiavi
+      \end{description}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{description}[Applicazione]
+        \item[Link] \texttt{qkd\_link}: \texttt{PHYS} (canale quantistico
+              diretto) o \texttt{VIRT} (key relay)
+        \item[Applicazione] \texttt{qkd\_app}: \texttt{CLIENT} o
+              \texttt{INTERNAL}, con QoS
+        \item[Controller] SD-QNC: registro delle app, pianifica i link,
+              dialoga con la rete ottica (SD-ONC)
+      \end{description}
+    \end{column}
+  \end{columns}
+  \vspace{1ex}
+  \begin{alertblock}{Principio di sicurezza}
+    Il materiale di chiave \emph{non lascia mai il perimetro del nodo}: al
+    controller salgono solo identificativi, stati, tassi e parametri fisici.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Il nodo SD-QKD}
+  \slidefig[0.74\textheight]{nodo_sdqkd}
+  \source{Adattata da GS QKD 015, Fig.~1~\cite{qkd015}}
+\end{frame}
+
+\begin{frame}{Link virtuali e applicazioni}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{block}{Key association link \texttt{VIRT}}
+        \begin{itemize}
+          \item consuma chiave dai link fisici sottostanti, quindi è
+                un'\emph{applicazione interna} con
+                \texttt{virt\_bandwidth};
+          \item ogni nodo intermedio conosce
+                \texttt{virt\_prev\_hop} e \texttt{virt\_next\_hop};
+          \item richiede \texttt{key\_relay\_mode\_enable}.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{QoS di un'applicazione}
+        \begin{itemize}
+          \item \texttt{max\_bandwidth}, \texttt{min\_bandwidth} (bit/s)
+          \item \texttt{jitter} massimo (ms)
+          \item \texttt{ttl} della chiave nel key store
+          \item condivisione di cammini o chiavi
+        \end{itemize}
+      \end{block}
+      \small È la risposta all'esigenza di QoS differenziata di UC2.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{Modello YANG}
+
+\begin{frame}{Anatomia di un modello YANG}
+  YANG~\cite{rfc7950} è uno \alert{schema} (come XSD o JSON
+      Schema) dei dati di configurazione e stato e delle operazioni.
+  \begin{itemize}
+        \item \texttt{leaf}, \texttt{leaf-list}, \texttt{container},
+              \texttt{list} con \texttt{key}
+        \item \texttt{config true} (decide il controller) /
+              \texttt{config false} (misura il nodo)
+        \item \texttt{grouping}/\texttt{uses} per riusare,
+              \texttt{augment} per estendere un altro modulo
+        \item \texttt{leafref}, \texttt{when}, \texttt{must} per vincoli
+        \item \texttt{rpc} e \texttt{notification}
+      \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{YANG: intestazione del modulo e identity}
+\begin{lstlisting}[language=yang]
+module etsi-qkd-sdn-node {
+  namespace "urn:etsi:qkd:yang:etsi-qkd-node";
+  prefix "etsi-qkdn";
+  import etsi-qkd-node-types { prefix "etsi-qkdn-types"; }
+  revision "2022-01-30" { reference "ETSI GS QKD 015 V2.1.1"; }
+  ...
+}
+identity QKD-LINK-TYPES { description "QKD key association link types."; }
+identity VIRT { base QKD-LINK-TYPES; }
+identity PHYS { base QKD-LINK-TYPES; }
+typedef qkd-link-types {
+  type identityref { base QKD-LINK-TYPES; }
+}
+\end{lstlisting}
+  \footnotesize Le \texttt{identity} sono estendibili da altri moduli,
+      a differenza di un'\texttt{enumeration}.
+\end{frame}
+
+\begin{frame}[fragile]{Il modello del nodo: \texttt{etsi-qkd-sdn-node}}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6.8}{7.4}\selectfont]
+module: etsi-qkd-sdn-node
+  +--rw qkd_node
+     +--rw qkdn_id              yang:uuid
+     +--ro qkdn_status?         etsi-qkdn-types:qkdn-status-types
+     +--rw qkdn_capabilities
+     |  +--rw link_stats_support?  application_stats_support?
+     |  +--rw key_relay_mode_enable?
+     +--rw qkd_applications
+     |  +--rw qkd_app* [app_id]
+     |     +--rw app_id, app_type, server_app_id, client_app_id*
+     |     +--rw app_qos            (max/min_bandwidth, jitter, ttl)
+     |     +--rw backing_qkdl_id*, local_qkdn_id, remote_qkdn_id
+     +--rw qkd_interfaces
+     |  +--rw qkd_interface* [qkdi_id]
+     |     +--rw qkdi_model, qkdi_type, qkdi_att_point
+     |     +--rw qkdi_capabilities  (role, wavelength_range, ...)
+     +--rw qkd_links
+        +--rw qkd_link* [qkdl_id]
+           +--rw qkdl_type, qkdl_enable, qkdl_local / qkdl_remote
+           +--rw virt_prev_hop, virt_next_hop*, virt_bandwidth (VIRT)
+           +--rw phys_channel_att, phys_wavelength          (PHYS)
+           +--rw qkdl_performance (skr, eskr, expected_consumption)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Il modello del nodo: sezioni e prestazioni}
+      \small
+      Un albero per nodo, quattro sezioni:
+      \begin{itemize}
+        \item identità e \textbf{capability};
+        \item \textbf{applicazioni} con QoS;
+        \item \textbf{interfacce} (moduli);
+        \item \textbf{link} con prestazioni.
+      \end{itemize}
+      \begin{block}{Prestazioni del link $\ell$}
+        \[
+          \mathrm{EC}_\ell = \sum_{a\in\mathcal{A}_\ell} b_a
+        \]
+        \[
+          \mathrm{ESKR}_\ell \approx \mathrm{SKR}_\ell - \mathrm{EC}_\ell
+        \]
+        {\footnotesize EC = \texttt{expected\_consumption}; lettura intuitiva,
+        non formula dello standard.}
+      \end{block}
+\end{frame}
+
+\begin{frame}{Notifiche dal nodo al controller}
+  Interrogare continuamente i nodi è inefficiente: la 015 definisce
+  notifiche YANG per oggetto.
+  \vspace{1ex}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l L@{}}
+    \toprule
+    \textbf{Oggetto} & \textbf{Notifiche} \\
+    \midrule
+    Applicazioni & \texttt{sdqkdn\_application\_new}, \texttt{\_qos\_update}, \texttt{\_disconnected} \\
+    Interfacce & \texttt{sdqkdn\_interface\_new}, \texttt{\_down} (con \emph{reason}), \texttt{\_out} \\
+    Link & \texttt{sdqkdn\_link\_down}, \texttt{\_perf\_update}, \texttt{\_overloaded} \\
+    Generiche & eventi e allarmi estendibili \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{2ex}
+
+  Inoltre NETCONF/RESTCONF permettono di sottoscrivere qualunque dato del
+  datastore e ricevere ogni variazione in tempo reale.
+\end{frame}
+
+\subsection{Workflow e sicurezza}
+
+\begin{frame}{Workflow: registrazione di un'applicazione}
+  \slidefig[0.6\textheight]{seq_registrazione}
+  \small Le applicazioni conoscono solo il proprio key manager: è il
+  controller, \alert{registro centrale}, ad abbinare le richieste e creare
+  l'\texttt{app\_id}.
+  \source{Adattata da GS QKD 015, Fig.~2~\cite{qkd015}}
+\end{frame}
+
+\begin{frame}{Workflow: creazione di link fisici e virtuali}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Link fisico}
+        \begin{enumerate}\small
+          \item innesco (domanda sui nodi o NBI);
+          \item due interfacce libere e compatibili;
+          \item richiesta di un \emph{lightpath} all'SD-ONC;
+          \item configurazione delle interfacce.
+        \end{enumerate}
+        \footnotesize Cuore della coesistenza con la rete ottica (UC4).
+      \end{block}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{block}{Link virtuale}
+        \small Se manca un lightpath: cammino sulla rete QKD, nodi
+        intermedi in modalità relay, estremi con la banda richiesta.
+        Esempio (nostro, non dello standard):
+        \[
+          w_\ell = \frac{1}{\mathrm{ESKR}_\ell}
+        \]
+        \[
+          p^\star = \arg\min_{p\in\mathcal{P}_r} \sum_{\ell\in p} w_\ell
+        \]
+        \[
+          \mathcal{P}_r = \Big\{\, p : \min_{\ell\in p}\mathrm{ESKR}_\ell \ge r \,\Big\}
+        \]
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{1ex}
+  \small Link virtuali mal gestiti congestionano i link fisici: serve la
+  vista globale del controller.
+\end{frame}
+
+\begin{frame}{Protocolli, sicurezza e limiti della 015}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Protocolli}
+      \begin{itemize}\small
+        \item NETCONF~\cite{rfc6241}: apparato–controller, transazionale,
+              SSH/TLS, XML
+        \item RESTCONF~\cite{rfc8040}: NBI, HTTP, CRUD, JSON/XML
+      \end{itemize}
+      \textbf{Installazione sicura}
+      \begin{itemize}\small
+        \item area sicura esistente: canale protetto con chiavi QKD;
+        \item nuovo sito: segreto iniziale, poi chiavi QKD
+              (\emph{key growing}).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{alertblock}{Che cosa resta fuori}
+        La 015 controlla \emph{un} dominio con \emph{un} controller.
+        \begin{itemize}\small
+          \item più domini QKD, anche di vendor diversi;
+          \item SAE nei nodi di un'altra rete (OTN);
+          \item gestione con gli stessi strumenti di orchestrazione
+                del resto della rete.
+        \end{itemize}
+      \end{alertblock}
+      \centering$\Rightarrow$ \textbf{GS QKD 018}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% =====================================================================
+\section[GS QKD 018]{ETSI GS QKD 018: l'interfaccia di orchestrazione}
+% =====================================================================
+
+\subsection{Scenario e modello}
+
+\begin{frame}{GS QKD 018 V1.1.1 (2022)}
+  \begin{itemize}
+    \item Interfaccia tra \alert{SDN orchestrator} (client) e
+          \alert{SDN controller} del dominio QKD (server)~\cite{qkd018}.
+    \item È la \emph{northbound interface} del controller: il complemento
+          della 015.
+  \end{itemize}
+  \[
+    \text{orchestrator} \xrightarrow{\text{QKD 018}} \text{controller}
+    \xrightarrow{\text{QKD 015}} \text{nodo SD-QKD}
+    \xrightarrow{\text{QKD 004/014}} \text{SAE}
+  \]
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{block}{Orchestrazione SDN}
+        \small Coordinamento automatico e continuo delle risorse per
+        stabilire e rilasciare servizi end-to-end che attraversano più
+        domini, ciascuno con il proprio controller.
+      \end{block}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{block}{Service link}
+        \small Associazione logica di chiave tra due nodi QKD, single- o
+        multi-hop: a livello di orchestrazione è il link virtuale della 015.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Lo scenario di riferimento}
+  \vspace{-1ex}
+  \slidefig[0.46\textheight]{scenario_018}
+  \vspace{-1.5ex}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item Rete QKD separata dalla rete di trasporto ottico (OTN):
+              prestazioni, isolamento, responsabilità distinte.
+        \item I \alert{SAE} stanno nei nodi OTN, le \alert{chiavi} nei
+              nodi QKD; ogni controller vede solo la propria rete.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      L'orchestrator risolve:
+      \begin{enumerate}
+        \item \emph{address matching} nodo OTN $\leftrightarrow$ nodo QKD;
+        \item provisioning end-to-end;
+        \item gestione: topologia, inventario, FCAPS.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \source{Adattata da GS QKD 018, Fig.~1~\cite{qkd018}}
+\end{frame}
+
+\begin{frame}{Funzioni dell'orchestrator e modello informativo}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \textbf{Funzioni richieste (§4.2)}
+      \begin{itemize}\footnotesize
+        \item tradurre le richieste in configurazione dei domini;
+        \item attivare e rilasciare servizi inter-dominio;
+        \item calcolare e modificare cammini multi-dominio;
+        \item scoprire nodi e link, vista astratta;
+        \item monitorare le risorse di chiave e FCAPS.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \textbf{Cinque blocchi informativi (§5)}
+      \begin{description}[§5.5]\footnotesize
+        \item[§5.1] discovery della topologia, proattiva o reattiva
+        \item[§5.2] stato e inventario: SKR, ESKR, ripristino
+        \item[§5.3] stato dei servizi end-to-end
+        \item[§5.4] provisioning con calcolo dei cammini candidati
+        \item[§5.5] notifiche e soglie configurabili (QBER, SKR, ESKR)
+      \end{description}
+    \end{column}
+  \end{columns}
+  \vspace{1ex}
+  \begin{block}{Ammissibilità di un cammino (formalizzazione nostra)}
+    Ogni link di un cammino multi-hop inoltra la stessa chiave, quindi conta
+    il collo di bottiglia:
+    \[
+      p \text{ ammissibile per la richiesta } r \iff
+      \min_{\ell\in p} \mathrm{ESKR}_\ell \ge r
+    \]
+  \end{block}
+\end{frame}
+
+\subsection{Moduli YANG}
+
+\begin{frame}[fragile]{Tre moduli YANG: topology}
+  \begin{columns}[T]
+    \begin{column}{0.54\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{5.8}{6.6}\selectfont]
+qkd_network
+ +-- sdqkd_nodes
+ |    +-- qkdn* [qkdn_id]               (nodi SD-QKD)
+ |         +-- qkd_interfaces
+ |              +-- qkdi* [qkdi_id]     (moduli QKD)
+ +-- qkd_links
+      +-- qkd_phys_links
+      |    +-- phys_link* [phys_link_id]
+      |         +-- link_type
+      |         +-- phys_link_local_qkdn
+      |         |    (qkdn_id_ref, qkdi_id_ref)
+      |         +-- phys_link_remote_qkdn
+      +-- qkd_svc_links
+           +-- svc_link* [svc_link_id]
+                +-- ... estremi locale/remoto
+\end{lstlisting}
+      \footnotesize Catena: \emph{topology} $\to$ \emph{inventory} $\to$
+      \emph{connectivity}. I moduli importano i tipi della 015.
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \small \texttt{etsi-qkd-sdn-topology}: un solo albero per l'intero
+      dominio, cioè un grafo
+      \[
+        G_i = (V_i, E_i),\quad E_i = E_{\text{phys}}\cup E_{\text{svc}}
+      \]
+      con estremi \texttt{leafref} validati. L'orchestrator compone la vista
+      multi-dominio:
+      \[
+        G = \Big(\bigcup_i V_i,\ \bigcup_i E_i \cup E_{\text{inter}}\Big)
+      \]
+      \footnotesize $E_{\text{inter}}$: adiacenze tra domini, tipicamente
+      nodi di bordo.
+    \end{column}
+  \end{columns}
+  \source{\cite{qkd018yang}}
+\end{frame}
+
+\begin{frame}{Tre moduli YANG: inventory}
+  \small \texttt{etsi-qkd-sdn-inventory} non crea un nuovo albero: fa
+  \alert{\texttt{augment}} della topologia.
+  \vspace{1ex}
+
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l L@{}}
+    \toprule
+    \textbf{Elemento} & \textbf{Foglie aggiunte} \\
+    \midrule
+    \texttt{qkdn} & versione, capability, location, IP e porta del KME
+    (dove i SAE prelevano le chiavi via QKD~014), stato \\
+    \texttt{qkdi} & ruolo, modello, tipo, punto di attacco, stato \\
+    \texttt{phys\_link} & \texttt{enable}, \texttt{wavelength},
+    \texttt{performance} (\texttt{skr}, \texttt{eskr},
+    \texttt{expected\_consumption}, QBER, SNR), stato \\
+    \texttt{svc\_link} & \texttt{bandwidth}, \texttt{performance},
+    \texttt{path\_restoration} (\texttt{AUTOMATIC}/\texttt{MANUAL},
+    \texttt{hold\_off\_time}), stato \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{1.5ex}
+
+  \small Notifiche: \texttt{sdqkdn\_new}, \texttt{\_interface\_new},
+  \texttt{\_phys\_link\_new}, \texttt{\_svc\_link\_new}, varianti
+  \texttt{\_perf\_update} e \texttt{\_overloaded}, \texttt{alarm},
+  \texttt{event}.
+\end{frame}
+
+\begin{frame}[fragile]{Tre moduli YANG: connectivity}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6}{6.8}\selectfont]
+connectivity_service/qkd_service
+ +-- qkd_app* [app_id]
+      +-- (dati app da QKD 015: stato, QoS)
+      +-- app_mapped_svc_link
+           +-- svc_link_and_qkdn_ids
+           +-- path_constraints
+           |    (include/exclude_nodes)
+           +-- candidate_paths
+           +-- deploy_path (path_id)
+\end{lstlisting}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Divisione dei ruoli}
+        \small Il controller conosce il dominio e \alert{propone} i
+        cammini; l'orchestrator ha la vista d'insieme e \alert{decide}.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{1ex}
+  \textbf{RPC: il workflow di provisioning passo per passo}\par
+      \vspace{0.5ex}
+      \scriptsize
+      \begin{tabular}{@{}r@{\ \ }l@{}}
+        1 & \texttt{app-registration}\\
+        2 & \texttt{create-service-link-id-for-app}\\
+        3 & \texttt{create-candidate-paths-per-service-link-for-app}\\
+        3' & \texttt{update-candidate-paths-per-service-link-for-app}\\
+        4 & \texttt{deploy-a-candidate-path-per-service-link-for-app}\\
+        5 & \texttt{delete-deployed-path-per-service-link-for-app}
+      \end{tabular}
+  \vspace{1ex}
+
+  \textbf{Notifiche}\par
+      \vspace{0.5ex}
+      \scriptsize\texttt{sdqkdn\_application\_new}, \texttt{\_deployed},
+      \texttt{\_qos\_update}, \texttt{\_disconnected}
+\end{frame}
+
+\begin{frame}{I tre moduli in sintesi}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l L l L@{}}
+    \toprule
+    \textbf{Modulo} & \textbf{Domanda} & \textbf{Clausola} & \textbf{Dati} \\
+    \midrule
+    topology & Com'è fatta la rete? & §5.1 & struttura (grafo) \\
+    inventory & Quante risorse ci sono e in che stato? & §5.2, §5.5 &
+    stato, prestazioni, configurazione, notifiche \\
+    connectivity & Come servo un'applicazione end-to-end? & §5.3, §5.4, §6.2 &
+    applicazioni, RPC di calcolo e deploy dei cammini \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{3ex}
+  \begin{exampleblock}{Perché questa struttura}
+    Chi vuole solo la struttura implementa \emph{topology}; chi vuole anche
+    lo stato aggiunge \emph{inventory} via \texttt{augment}, senza duplicare
+    nulla; \emph{connectivity} aggiunge le operazioni.
+  \end{exampleblock}
+\end{frame}
+
+\subsection{Workflow e sicurezza}
+
+\begin{frame}{Workflow di provisioning QKD + OTN (§6.2)}
+  \slidefig[0.76\textheight]{seq_018}
+  \source{Rielaborazione semplificata di GS QKD 018, Fig.~2~\cite{qkd018}}
+\end{frame}
+
+\begin{frame}{Il workflow passo per passo}
+  \begin{columns}[T]
+    \begin{column}{0.56\textwidth}
+      \begin{enumerate}\small
+        \item L'amministratore chiede un servizio (SAE, QoS).
+        \item L'orchestrator individua i controller ed effettua
+              l'address matching.
+        \item Chiede al controller QKD un service link e i cammini, con
+              vincoli.
+        \item Il controller assegna \texttt{svc\_link\_id} e restituisce
+              candidati con priorità (passo ripetibile).
+        \item L'orchestrator sceglie e chiede il deploy; i nodi fanno key
+              relay lungo il cammino.
+        \item Provisioning dell'app e avviso al controller OTN.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{block}{015 vs 018}
+        \small Nella 015 il controller calcola e configura da solo il link
+        virtuale; nella 018 lo \alert{propone} e attende la scelta.
+      \end{block}
+      \begin{block}{Più domini QKD}
+        \small L'orchestrator ripete i passi 3–5 per ogni dominio lungo il
+        cammino inter-dominio, collegando i segmenti nei nodi di bordo.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Protocolli e sicurezza}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Trasporto (§8)}
+      \begin{itemize}\small
+        \item Modello (YANG 1.1) separato dal protocollo: NETCONF o
+              RESTCONF.
+        \item RESTCONF: ogni risorsa è un URI; \texttt{GET} per leggere,
+              \texttt{POST}/\texttt{PUT}/\texttt{PATCH}/\texttt{DELETE}
+              per configurare; notifiche via stream.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{alertblock}{Sicurezza (§7)}
+        \small Le chiavi QKD \textbf{non transitano mai} per controller o
+        orchestrator: nei modelli compaiono solo tassi e l'indirizzo del KME.
+        Un orchestrator compromesso causa disservizi, non lettura delle chiavi.
+        La protezione del canale (es.\ TLS) è lasciata all'implementazione.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+  \vspace{1ex}
+\begin{lstlisting}
+GET  /restconf/data/etsi-qkd-sdn-topology:qkd_network
+POST /restconf/operations/etsi-qkd-sdn-connectivity:create-service-link-id-for-app
+\end{lstlisting}
+\end{frame}
+
+% =====================================================================
+\subsection{Analogia ACTN}
+% =====================================================================
+
+\begin{frame}{La 018 applica alla QKD il pattern ACTN}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l l L@{}}
+    \toprule
+    \textbf{ACTN} & \textbf{ETSI QKD} & \textbf{Osservazione} \\
+    \midrule
+    CNC & amministratore / portale cliente & origina la richiesta \\
+    MDSC & SDN orchestrator & vista multi-dominio, decisione del cammino \\
+    PNC & SDN controller del dominio QKD & calcola i candidati, attiva i cammini \\
+    MPI & interfaccia GS QKD 018 & topologia astratta, provisioning, notifiche \\
+    SBI & interfaccia GS QKD 015 & controllo dei singoli nodi \\
+    TE topology astratta & \texttt{etsi-qkd-sdn-topology} & vista vendor-neutral \\
+    banda TE & SKR / ESKR & la risorsa da allocare è la chiave \\
+    \bottomrule
+  \end{tabularx}
+  \vspace{1ex}
+  \begin{alertblock}{La differenza: la risorsa}
+    In ACTN la banda è fissata dalla capacità del canale; in QKD l'SKR
+    \emph{fluttua} e la chiave si accumula in buffer finiti. Da qui il peso
+    di \texttt{\_perf\_update}, \texttt{\_overloaded} e
+    \texttt{path\_restoration}.
+  \end{alertblock}
+  \source{\cite{rfc8453}}
+\end{frame}
+
+% =====================================================================
+\section[Casi reali e conclusioni]{Casi reali, limiti e conclusioni}
+% =====================================================================
+
+\subsection{SK Telecom}
+
+\begin{frame}{SK Telecom: orchestrazione multi-vendor su KOREN}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}\small
+        \item Primo dispiegamento documentato di un orchestrator
+              conforme alla 018 (2020–2022)~\cite{sim2023}.
+        \item Due operatori, KMS e dispositivi di vendor diversi, ognuno
+              col proprio controller (QKDNC); un orchestrator (QKDNO).
+        \item BB84 decoy state, tratte da 39 a 100~km.
+        \item \alert{Nodi di bordo} (Pangyo, Daejeon): nessun modulo QKD,
+              due KMS interconnessi.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Estensioni al modello}
+        \small
+        \begin{itemize}
+          \item tipo di applicazione \emph{multi-segment} (\texttt{MS}),
+                con \texttt{ms\_app\_id} comune ai domini;
+          \item \texttt{server\_ms\_info}, \texttt{client\_ms\_info};
+          \item RPC \texttt{app-registration-ms};
+          \item chiavi al bordo via GS QKD 020~\cite{qkd020}.
+        \end{itemize}
+      \end{block}
+      \footnotesize \texttt{CLIENT}/\texttt{INTERNAL} non bastano per il
+      multi-dominio; le \texttt{identity} YANG permettono di estendere.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{PoliMi e MadQCI}
+
+\begin{frame}{PoliMi e MadQCI}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Politecnico di Milano~\cite{vicario2025}}
+        \small
+        \begin{itemize}
+          \item Controllo gerarchico per reti metropolitane.
+          \item Controller di dominio su ONOS con il modello 015.
+          \item Interfaccia 018 via RESTCONF verso un orchestrator Python
+                che aggrega più domini.
+          \item Tutta la pila 015 $\to$ 018 in software aperto.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \begin{block}{MadQCI, Madrid~\cite{madqci2024}}
+        \small
+        \begin{itemize}
+          \item Rete reale: decine di moduli multi-vendor, oltre 130~km,
+                integrata con la rete ottica di produzione.
+          \item Controllo SD-QKD basato sulla 015.
+          \item La 018 è indicata come attività \emph{ancora in corso}.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{2ex}
+  \centering Il controllo di dominio è maturo, l'\alert{orchestrazione}
+  molto meno.
+\end{frame}
+
+% =====================================================================
+% =====================================================================
+
+\subsection{Limiti}
+
+\begin{frame}{Limiti e prospettive}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{description}[Multi-dominio]\small
+        \item[Adozione] la 015 è in reti reali, la 018 quasi solo in
+              testbed.
+        \item[Multi-dominio] lo scenario normativo è QKD + OTN; QKD + QKD
+              richiede estensioni e la GS QKD 020.
+        \item[Metriche] l'ESKR è istantaneo e ignora i buffer~\cite{laschet2026}.
+      \end{description}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{description}[Riservatezza]\small
+        \item[Riservatezza] esporre la topologia è accettabile dentro un
+              operatore, meno tra operatori~\cite{laschet2026,interconnect2026}.
+        \item[Sicurezza] protezione del canale orchestrator–controller non
+              specificata.
+        \item[Algoritmi] calcolo dei cammini non standardizzato~\cite{routing2024,mendez2026}.
+      \end{description}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\subsection{Conclusioni}
+
+\begin{frame}{Conclusioni}
+  \begin{center}
+  \begin{tikzpicture}[node distance=3mm,
+      st/.style={draw,rounded corners,fill=blue!5,align=center,
+                 font=\scriptsize,text width=2.9cm,minimum height=22mm}]
+    \node[st] (a) {\textbf{GS QKD 002}\\[2pt] la QKD utile è una rete:
+      gestione delle chiavi, QoS, integrazione ottica};
+    \node[st,right=of a] (b) {\textbf{GS QKD 015}\\[2pt] il nodo SD-QKD:
+      interfacce, key manager, link PHYS/VIRT, app con QoS, YANG};
+    \node[st,right=of b,fill=orange!15] (c) {\textbf{GS QKD 018}\\[2pt]
+      ogni dominio è un grafo astratto: il controller propone,
+      l'orchestrator decide};
+    \draw[->,thick] (a) -- (b);
+    \draw[->,thick] (b) -- (c);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{1ex}
+  \begin{itemize}
+    \item Il disegno ricalca ACTN e riusa YANG, NETCONF e RESTCONF.
+    \item Principio essenziale: \alert{le chiavi non lasciano mai i nodi}.
+    \item KOREN, PoliMi e MadQCI: lo schema funziona, ma l'orchestrazione è
+          giovane. Prossimo passo: multi-operatore, metriche migliori,
+          riservatezza tra domini.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Riferimenti}
+  \printbibliography[heading=none]
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    {\Large Grazie per l'attenzione}\\[2ex]
+    Domande?
+  \end{center}
+\end{frame}
+
+\end{document}

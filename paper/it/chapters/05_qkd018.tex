@@ -1,0 +1,145 @@
+% =====================================================================
+\section{ETSI GS QKD 018}
+\label{sec:qkd018}
+% =====================================================================
+
+La GS~QKD~018 (V1.1.1, aprile 2022)~\cite{qkd018} definisce
+l'\emph{orchestration interface} tra un SDN orchestrator e l'SDN controller
+di una rete QKD. Il controller agisce da \emph{server}, l'orchestrator da
+\emph{client}; il modello informativo è espresso in YANG ed è indipendente
+dal vendor. Nella terminologia SDN è la \emph{northbound interface} del
+controller QKD, cioè l'esatto complemento della GS~QKD~015. La gerarchia
+complessiva diventa:
+\begin{center}
+\small
+orchestrator $\xrightarrow{\text{QKD 018}}$ controller
+$\xrightarrow{\text{QKD 015}}$ SDN agent / nodo SD-QKD
+$\xrightarrow{\text{QKD 004/014}}$ SAE.
+\end{center}
+
+\begin{definition}[Orchestrazione SDN]
+L'\emph{orchestrazione SDN} è il processo continuo con cui le risorse
+disponibili vengono coordinate automaticamente, secondo criteri di
+ottimizzazione, per stabilire e rilasciare servizi end-to-end che
+attraversano più domini di rete, ciascuno governato dal proprio controller
+SDN~\cite[§4.2]{qkd018}.
+\end{definition}
+
+\begin{definition}[Service link]
+Un \emph{service link} è un collegamento logico di associazione di chiave
+tra due nodi QKD, realizzato da uno o più link fisici QKD (single-hop o
+multi-hop). A livello di orchestrazione corrisponde al link virtuale della
+GS~QKD~015.
+\end{definition}
+
+\input{figures/scenario_018}
+
+% ---------------------------------------------------------------------
+\subsection{Use case della QKD 018}
+\label{sec:usecase018}
+
+Il caso d'uso da cui nasce lo standard (§4.1) riprende quasi alla lettera
+il problema del backbone della GS~QKD~002. Un operatore che introduce la
+QKD può far convivere canali quantistici e classici nella stessa fibra
+oppure tenerli separati. La convivenza è difficile per due motivi: le
+potenze ottiche dei canali classici sono di molti ordini di grandezza
+superiori e disturbano il canale quantistico, e le distanze raggiungibili
+dai due tipi di canale sono molto diverse. In un ambiente ricco di fibra
+l'operatore può quindi scegliere una rete QKD separata dalla rete di
+trasporto ottico (OTN), con vantaggi di prestazioni, isolamento e
+separazione delle responsabilità. Seguendo il paradigma SDN, le due reti
+sono governate da controller diversi.
+
+Nasce così un problema di coordinamento: i SAE che devono cifrare il
+traffico stanno nei nodi OTN, le chiavi sono generate nei nodi QKD e
+ciascun controller conosce solo la propria rete. L'orchestrator risolve tre
+questioni:
+
+\begin{enumerate}
+  \item \textbf{Address matching}: associa l'indirizzo del nodo OTN che deve
+        ricevere chiavi a quello del nodo QKD che le fornisce; i due si
+        trovano nello stesso perimetro di sicurezza (Fig.~\ref{fig:scenario});
+  \item \textbf{provisioning end-to-end}: traduce la richiesta di un cliente
+        nella configurazione dei singoli domini, sceglie i domini da
+        attraversare e coordina i cammini;
+  \item \textbf{gestione}: raccoglie topologia, inventario delle risorse di
+        chiave e informazioni FCAPS di ogni dominio.
+\end{enumerate}
+
+Generalizzando, lo stesso schema permette di orchestrare \emph{più domini
+QKD di vendor diversi}, ciascuno dietro il proprio controller, oltre a
+domini QKD e classici insieme. Lo standard sottolinea anche un vantaggio
+pratico: un operatore che ha già un orchestrator per le proprie reti
+ottiche può integrare la rete QKD senza introdurre strumenti di gestione
+separati, che è esattamente il requisito di gestione integrata del caso UC4.
+
+Le funzioni richieste all'orchestrator (§4.2) sono:
+\begin{itemize}
+  \item tradurre le richieste di servizio dei clienti nella configurazione
+        dei domini e nell'allocazione dei SAE;
+  \item richiedere attivazione e rilascio dei servizi, incluse le
+        connessioni tra domini;
+  \item calcolare cammini multi-dominio, con le connessioni inter-dominio e
+        gli estremi;
+  \item modificare i cammini su vincoli dell'operatore;
+  \item scoprire nodi e link di ciascun controller e mantenerne una vista
+        astratta;
+  \item monitorare le risorse di chiave disponibili su nodi e link;
+  \item monitorare la gestione FCAPS e riceverne le notifiche.
+\end{itemize}
+
+% ---------------------------------------------------------------------
+\subsection{Il modello informativo}
+\label{sec:infomodel}
+
+La clausola 5 traduce queste funzioni in cinque blocchi informativi.
+
+\paragraph{Discovery della topologia (§5.1).}
+Il controller espone nodi SD-QKD, interfacce e link fisici, e in seguito i
+service link. L'orchestrator non ha bisogno della composizione fisica
+completa, ma di una vista \emph{astratta} di ciascun dominio e della
+connettività tra domini. La discovery può essere \emph{proattiva}
+(l'orchestrator interroga il controller prima di ogni nuovo calcolo di
+cammino) o \emph{reattiva} (il controller notifica ogni cambiamento, per
+esempio l'aggiunta o la rimozione di un nodo).
+
+\paragraph{Stato della rete e inventario (§5.2).}
+Per ogni nodo e link fisico il controller espone lo stato, le prestazioni
+fisiche e soprattutto le risorse di chiave: il tasso di generazione e il
+tasso disponibile dopo il consumo interno. Per i service link si aggiungono
+la banda, la chiave disponibile e la politica di ripristino in caso di
+guasto.
+
+\paragraph{Stato dei servizi end-to-end (§5.3).}
+L'orchestrator può interrogare le applicazioni esterne attive, i nodi
+locale e remoto e i service link che le servono, con il relativo stato e
+tasso di chiave.
+
+\paragraph{Provisioning con calcolo dei cammini (§5.4).}
+L'orchestrator chiede al controller cammini che soddisfino certi vincoli; il
+controller restituisce una lista di candidati, eventualmente più volte con
+vincoli diversi, finché l'orchestrator non ne sceglie uno da attivare. In
+caso di guasto l'orchestrator può chiedere di sostituire il cammino.
+
+\paragraph{Notifiche (§5.5).}
+Il controller segnala eventi, allarmi e superamenti di soglia. Le soglie
+sulle prestazioni (QBER, SKR, ESKR) sono configurabili dall'orchestrator.
+Rispetto alla 015 si aggiungono notifiche sullo stato dei nodi
+(\texttt{sdqkdn\_new}, \texttt{\_operating}, \texttt{\_down},
+\texttt{\_failure}, \texttt{\_out}), sulle applicazioni attivate
+(\texttt{sdqkdn\_application\_deployed}) e sui service link
+(\texttt{sdqkdn\_svc\_link\_down}, \texttt{\_perf\_update},
+\texttt{\_overloaded}).
+
+La~\eqref{eq:eskr015} si estende in modo naturale al livello di
+orchestrazione. Poiché in un cammino multi-hop $p$ ogni link inoltra la
+stessa chiave, un nuovo servizio con richiesta $r$ è sostenibile solo se il
+collo di bottiglia lo regge:
+\begin{equation}
+  p \text{ ammissibile} \iff
+  \min_{\ell\in p}\, \mathrm{ESKR}_\ell \;\ge\; r .
+  \label{eq:admissible}
+\end{equation}
+Anche questa è una formalizzazione nostra, coerente con i campi
+\texttt{skr}, \texttt{eskr} ed \texttt{expected\_consumption} dei modelli
+YANG; lo standard non prescrive alcun algoritmo di calcolo dei cammini.

@@ -1,0 +1,58 @@
+% =====================================================================
+\section{State of the art}
+\label{sec:sota}
+% =====================================================================
+
+\paragraph{QKD fundamentals.}
+The QKD literature is by now well established. The review by Pirandola
+et al.~\cite{pirandola2020} covers discrete-variable protocols (BB84 and
+its \emph{decoy-state} variants), continuous-variable protocols and
+security proofs. Two constraints that drive all network engineering emerge
+from it: the key rate decays exponentially with distance, and a single
+link over commercial fibre does not exceed a few hundred kilometres.
+
+\paragraph{From link to network.}
+Mehic et al.~\cite{mehic2020} and Cao et al.~\cite{cao2022} describe the
+transition from point-to-point links to QKD \emph{networks}: layered
+architecture, \emph{trusted relay}, key management and routing. The GÉANT
+white paper~\cite{geant2024} gives a readable summary of the same picture
+and of the ETSI and ITU-T standards. Routing, which becomes central once a
+network is orchestrated, is discussed in~\cite{routing2024}.
+
+\paragraph{Standardisation.}
+Two bodies have produced complementary specifications. ETSI ISG QKD started
+in 2010 with the use cases~\cite{qkd002} and then defined the interfaces
+towards applications~\cite{qkd004,qkd014}, towards the SDN
+controller~\cite{qkd015}, towards the orchestrator~\cite{qkd018} and
+between key management systems~\cite{qkd020}. ITU-T, with the Y.3800
+series, defined the reference architecture of QKD networks
+(QKDN)~\cite{ituy3800}, their control and management~\cite{ituy3804} and
+SDN-based control~\cite{ituy3805}.
+
+\paragraph{SDN applied to QKD.}
+The \emph{Software-Defined Networking} paradigm~\cite{kreutz2015} separates
+the control plane from the data plane and centralises decisions in a
+programmable controller. The UPM/Telefónica group was the first to
+integrate QKD resources into an SDN-controlled optical network, both
+experimentally~\cite{aguado2016} and in a systematic
+tutorial~\cite{aguado2020}; GS~QKD~015 grew out of this line of work.
+
+\paragraph{Orchestration and multi-domain.}
+The orchestrator–controller interface is specified by
+GS~QKD~018~\cite{qkd018} and its YANG modules~\cite{qkd018yang}. The first
+documented real deployment is that of Sim et al.~\cite{sim2023} (SK
+Telecom), who orchestrate two domains from different vendors on the KOREN
+testbed. Vicario's thesis~\cite{vicario2025} builds a complete hierarchical
+prototype with ONOS and RESTCONF. The MadQCI network~\cite{madqci2024} uses
+GS~QKD~015 extensively but describes GS~QKD~018 orchestration as work still
+in progress. More recent works propose SDN applications for dynamic link
+reconfiguration~\cite{mendez2026}, path-selection criteria and inter-domain
+routing that preserves topology confidentiality~\cite{laschet2026}, and
+hybrid key-delivery models between regional networks~\cite{interconnect2026}.
+
+\paragraph{Contribution.}
+With respect to these sources, this work offers a unified and reasoned
+reading of the GS~QKD~002 $\to$ 015 $\to$ 018 chain: it shows how the
+requirements of the use cases translate into the components of an SD-QKD
+network, explains the structure of the YANG models that describe them and
+analyses how GS~QKD~018 abstracts them for multi-domain orchestration.

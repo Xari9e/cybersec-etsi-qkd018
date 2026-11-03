@@ -1,0 +1,171 @@
+% =====================================================================
+\subsection{ETSI GS QKD 002: the use cases}
+\label{sec:qkd002}
+% =====================================================================
+
+GS~QKD~002 V1.1.1 (June 2010)~\cite{qkd002} is the first document published
+by the ISG QKD. Its goal is not strictly technical: before standardising
+\emph{how} to implement QKD, the group wanted to clarify \emph{where} it is
+needed, \emph{who} uses it and \emph{which requirements} it must meet to
+enter existing infrastructures. The document reasons in three steps: it
+places QKD among cryptographic primitives, identifies the layers of the
+network stack where it can be inserted and describes six use cases with
+their requirements. Following this reasoning is useful because it shows
+where the needs come from that, twelve years later, led to GS~QKD~015
+and~018.
+
+\subsubsection{QKD as a cryptographic primitive}
+
+The document starts from a typical QKD system: two units, usually 19"
+rack-mounted, connected by a quantum channel over fibre or free space up to
+about $100$~km long, which output the same random bit sequence at both
+ends. Clause 4 immediately makes clear that this solves \emph{a single}
+cryptographic problem.
+
+A secure system needs three primitives: \emph{encryption}, \emph{key
+distribution} and \emph{message authentication}. QKD covers only the
+second; encryption requires a one-time pad or symmetric ciphers such as
+AES, and authentication requires MACs (for instance based on Wegman–Carter
+universal hashing) or digital signatures. It follows that QKD is a
+\emph{complement} to classical cryptography, not a replacement, and that
+its overall security also depends on the other components of the system.
+The document also stresses that the public channel of QKD must be
+authenticated with a pre-distributed secret.
+
+\subsubsection{Where QKD fits in the network stack}
+
+Clause 6 describes at which layer of the stack a QKD key can be consumed.
+The choice of layer determines what must be modified and how transparent
+the integration is.
+
+\begin{description}[style=nextline,leftmargin=1.2em]
+  \item[Data link layer (L2)] The QKD key feeds the PPP key exchange, the
+        IEEE~802.1AE (MACsec) keys or a \emph{QKD link encryptor}, i.e.\ a
+        line encryptor that directly consumes the keys produced by the link
+        and creates an encrypted tunnel between two sites. It is the most
+        transparent option for applications.
+  \item[Network layer (L3)] A modified IKE uses the QKD key as the shared
+        secret for IPsec.
+  \item[Transport layer (L4)] The QKD key replaces the TLS/SSL session keys
+        or is used instead of HMACs for authentication.
+  \item[Application layer] Applications use the key to authenticate users
+        or to encrypt the content exchanged between their instances.
+\end{description}
+
+The conceptual point is that, whatever the layer, there is one component
+that \emph{consumes} keys and one that \emph{supplies} them: this is the
+separation that later becomes SAE and KME, with a standard interface
+(GS~QKD~004 and~014) between them.
+
+\subsubsection{The six use cases}
+
+Clause 7 describes six use cases with a fixed structure: goal,
+description, actors, benefits, operational and quality-of-service
+considerations. We summarise them along a logical thread: from a single
+link to a network, and from a private network to an operator's network.
+
+\paragraph{UC1 – Offsite backup / business continuity.}
+An enterprise replicates data from a primary site to a backup site (daily
+backups, snapshots, SAN mirroring, database replication). A single
+point-to-point QKD link feeds a line encryptor over Ethernet or Fibre
+Channel; the fibre may be dedicated (\emph{dark fibre}) or shared via WDM
+or TDM. The requirements that emerge are: key renewal as frequent as the
+generation rate allows, handling of recalibration phases during continuous
+transfers, an initial secret at installation, and high encryption speed.
+The document notes that overall security is not unconditional, since it
+also depends on the encryptor.
+
+\paragraph{UC2 – Enterprise metropolitan area network.}
+Several branches of an enterprise or a public body are connected to data
+centres, through which branch-to-branch traffic also flows. Each link is
+protected by a QKD link encryptor that encrypts and authenticates at
+layer~2, transparently for applications. Two new needs appear: different
+links carry different traffic volumes and timings, hence \emph{different
+QoS requirements}, and transfers may be scheduled, periodic or triggered by
+thresholds. The \emph{QKD Secured Key Server} variant has a central server
+that distributes keys and certificates to clients across the metropolitan
+area over channels encrypted with one-time pad and authenticated with
+Wegman–Carter: an early example of a key service offered by a network.
+
+\paragraph{UC3 – Critical infrastructure control and data acquisition.}
+This case protects the SCADA traffic of a critical infrastructure, with a
+railway network as the example: here the \emph{authenticity} of commands
+(switches, signals) matters more than their confidentiality. The nodes of
+the private WAN sit in stations with a controlled perimeter, while the
+fibre lies outside it. The document proposes two architectures: single QKD
+links between nodes, with key buffering and forwarding handled in the
+nodes, or a \emph{QKD network with integrated key management} and a
+dedicated interface towards applications. It asks for the highest
+availability, with precautions for recalibration, failures and denial of
+service, and for the ability to initialise new redundant links with secrets
+obtained along an alternative path. It is the first case in which key
+relay, centralised management and path redundancy appear together.
+
+\paragraph{UC4 – Backbone protection.}
+A fibre in an operator's metropolitan backbone, typically a WDM ring with
+OADMs or ROADMs, carries a quantum channel alongside the data channels. The
+keys protect control and management traffic or are offered to customers.
+There are two actors: the infrastructure provider and the service provider
+that uses it; backbone nodes are trusted. The requirements are the closest
+to those of an operator: the QKD system must not reduce the throughput of
+the WDM system by more than $10\%$, must be compatible with common fibres,
+splices and connectors, its management must \emph{integrate into the
+management of the WDM system}, and installation and maintenance must be
+possible for staff without quantum physics expertise.
+
+\paragraph{UC5 – High-security access network.}
+In a passive optical network (PON) for Fiber-to-the-Home, downstream traffic
+is broadcast to all ONUs, so it must be encrypted to prevent one user from
+reading another's data. One OLT serves $32$ to $128$ ONUs and the quantum
+channel follows the same path as the classical one. The configuration is
+highly asymmetric: a single, more expensive detector at the OLT serves many
+sources at the ONUs. Short distances allow high rates, which are needed
+because the generation capacity is shared among all users. The \emph{QKD
+Authenticated Sensor Network} variant applies the same scheme to a central
+station with many sensors and actuators.
+
+\paragraph{UC6 – Long-haul service.}
+Two distant ground stations $A$ and $B$, for example on opposite shores of
+an ocean, want to share a key without trusting intermediate ground nodes. A
+moving node $C$ (satellite, aircraft or high-altitude platform) establishes
+a secret $a$ with $A$ and then a secret $b$ with $B$, and sends $a\oplus b$
+to $B$ over a classical channel; $B$ recovers $a$. It is a key relay in
+which the trusted node is $C$. Low-orbit satellites fly at about
+$300$–$800$~km and pass over the stations about once a day; geostationary
+orbit is not practical. Weather and atmosphere can reduce or cancel the
+rate, so redundant channels are needed.
+
+Table~\ref{tab:qkd002} summarises the six cases.
+
+\begin{table}[h]
+\centering\small
+\caption{The GS~QKD~002 use cases and the elements that anticipate later
+specifications.}
+\label{tab:qkd002}
+\begin{tabularx}{\textwidth}{@{}l L L@{}}
+\toprule
+\textbf{Case} & \textbf{Configuration} & \textbf{Need it anticipates} \\
+\midrule
+UC1 Backup & point-to-point link + line encryptor & key–encryptor interface \\
+UC2 Enterprise metro & several links, key server & per-application QoS \\
+UC3 Critical infrastructure & network with key relay and integrated management & KMS, redundancy, centralised control \\
+UC4 Backbone & quantum channel in WDM & coexistence with the optical network, integrated management \\
+UC5 PON access & point-to-multipoint & sharing of key capacity \\
+UC6 Long-haul & relay through a moving node & trusted node, redundancy \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{What it leaves behind}
+
+GS~QKD~002 is a first-edition document: the clause on general requirements
+and the functional characteristics of the individual cases are marked as
+not yet available. Its value lies in having set the questions. Read in
+sequence, the use cases show that useful QKD is not a single link but a
+\emph{network}, which requires: a key management system that stores and
+relays keys (UC3, UC6); a way to express different service requirements for
+different applications (UC2); and coexistence with the operator's optical
+network, with management integrated into the existing one and usable by
+non-specialist staff (UC4). The first two needs are answered by GS~QKD~015,
+the third, in the form of coordination between the QKD network and the
+transport network, by GS~QKD~018.
