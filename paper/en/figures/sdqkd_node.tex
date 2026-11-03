@@ -1,0 +1,47 @@
+% Figure: SD-QKD network and internal structure of a node (adapted from GS QKD 015, Fig. 1)
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  comp/.style={draw,rounded corners,align=center,font=\scriptsize,
+               minimum height=6mm},
+  small/.style={draw,circle,fill=green!12,minimum size=9mm,font=\scriptsize,
+                align=center}]
+  % controller
+  \node[box,fill=blue!8,minimum width=4cm] (ctl) at (-0.6,4.3) {SDN controller (SD-QNC)};
+  % detailed node
+  \node[comp,fill=yellow!20,minimum width=1.4cm] (m1) at (-2.2,0) {QKD\\module 1};
+  \node[comp,fill=yellow!20,minimum width=1.4cm] (m2) at (-0.6,0) {QKD\\module 2};
+  \node[comp,fill=yellow!20,minimum width=1.4cm] (m3) at (1.0,0) {QKD\\module 3};
+  \node[comp,fill=green!12,minimum width=4.6cm] (kms) at (-0.6,1.0) {key manager (KMS, key store)};
+  \node[comp,fill=blue!6,minimum width=1.9cm] (agent) at (-1.95,2.0) {SDN agent};
+  \node[comp,fill=gray!10,minimum width=2.4cm] (app) at (0.75,2.0) {applications\\(QKD 004/014)};
+  \begin{scope}[on background layer]
+    \node[draw,dashed,rounded corners,fill=gray!3,inner sep=6pt,
+          fit=(m1)(m3)(kms)(agent)(app),
+          label={[font=\scriptsize\itshape]below:SD-QKD node (secure perimeter)}] (node) {};
+  \end{scope}
+  % remote nodes
+  \node[small] (r1) at (4.6,2.6) {node\\B};
+  \node[small] (r2) at (4.4,-0.2) {node\\C};
+  \node[small] (r3) at (-5.2,0.6) {node\\D};
+  % links
+  \draw[thick] (m3.east) -- node[lbl,above]{PHYS} (r2);
+  \draw[thick] (m1.west) -- (r3);
+  \draw[thick] (r1) -- (r2);
+  \draw[thick,dotted,red!70!black] (kms.east) -- node[pos=0.55,font=\scriptsize,fill=white,inner sep=1pt]{VIRT via C} (r1);
+  \draw[<->] (m1) -- (m1|-kms.south);
+  \draw[<->] (m2) -- (m2|-kms.south);
+  \draw[<->] (m3) -- (m3|-kms.south);
+  \draw[<->] (agent.south) -- (agent.south|-kms.north);
+  \draw[<->] (app.south) -- (app.south|-kms.north);
+  \draw[<->,dashed,blue!60!black] (agent.north) -- node[pos=0.5,left,font=\scriptsize]{GS QKD 015} (ctl);
+  \draw[<->,dashed,blue!60!black] (r1) -- (ctl);
+  \draw[<->,dashed,blue!60!black] (r3) -- (ctl);
+\end{tikzpicture}
+\caption[SD-QKD network and internal structure of a node]{An SD-QKD network: nodes are connected by physical (solid) and
+virtual (dotted) links, and each is controlled by the controller through its
+SDN agent (dashed). The node in the foreground shows the internal
+components: the QKD modules, exposed as interfaces, the key manager, the
+application interface and the agent. Adapted from~\cite[Fig.~1]{qkd015}.}
+\label{fig:sdqkd}
+\end{figure}

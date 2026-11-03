@@ -1,0 +1,81 @@
+% E-R diagram (Chen notation, (min,max) cardinalities) derived from etsi-qkd-sdn-node
+% (ETSI GS QKD 015 V2.1.1) -- view of the SDN controller, which holds the qkd_node tree of every node
+\begin{tikzpicture}[x=1cm,y=1cm]
+  % ---------------- entities ----------------
+  \node[ent] (N) at (0,6.2) {\textbf{QKD_NODE}\nodepart{two}%
+    \ul{qkdn_id}\\ qkdn_status\\ qkdn_version\\ qkdn_location_id\\
+    link_stats_support\\ application_stats_support\\ key_relay_mode_enable};
+  \node[went] (I) at (-7.4,6.2) {\textbf{QKD_INTERFACE}\nodepart{two}%
+    \ul{qkdi_id}\\ qkdi_model\\ qkdi_type\\ qkdi_status\\ att_device, att_port\\
+    role_support\\ wavelength_range\\ max_absorption};
+  \node[ent] (L) at (10.4,6.2) {\textbf{QKD_LINK}\nodepart{two}%
+    \ul{qkdl_id}\\ qkdl_type\\ qkdl_status\\ qkdl_enable\\
+    expected_consumption\\ skr, eskr};
+  \node[ent] (P) at (8.4,1.2) {\textbf{PHYS_LINK}\nodepart{two}%
+    phys_channel_att\\ phys_wavelength\\ phys_qkd_role};
+  \node[ent] (V) at (12.6,1.2) {\textbf{VIRT_LINK}\nodepart{two}virt_bandwidth};
+  \node[went] (PP) at (8.4,-2.6) {\textbf{PHYS_PERF}\nodepart{two}\ul{perf_type}\\ value};
+  \node[ent] (A) at (0,-1.4) {\textbf{QKD_APP}\nodepart{two}%
+    \ul{app_id}\\ app_type, app_status\\ server_app_id\\ client_app_id (0,N)\\
+    app_priority\\ creation_time, expiration_time\\
+    max_bandwidth, min_bandwidth\\ jitter, ttl\\
+    clients_shared_path_enable\\ clients_shared_keys_required};
+  \node[went] (S) at (-7.4,-1.4) {\textbf{APP_STATISTICS}\nodepart{two}%
+    \ul{end_time}\\ start_time\\ consumed_bits};
+
+  % ---------------- relationships ----------------
+  % node - interface (identifying)
+  \node[wrel] (h) at (-3.6,6.2) {HOSTS};
+  \draw[er] (N.west) -- node[card,pos=.25,above]{(0,N)} (h);
+  \draw[er] (h) -- node[card,pos=.75,above]{(1,1)} (I.east);
+  % link endpoints
+  \node[rel] (le) at (5.2,7.4) {LOCAL\\END};
+  \node[rel] (re) at (5.2,5.0) {REMOTE\\END};
+  \draw[er] (N.east |- le) -- node[card,pos=.2,above]{(0,N)} (le);
+  \draw[er] (le) -- node[card,pos=.8,above]{(0,1)} (L.west |- le);
+  \draw[er] (N.east |- re) -- node[card,pos=.2,below]{(0,N)} (re);
+  \draw[er] (re) -- node[card,pos=.8,below]{(0,1)} (L.west |- re);
+  \node[font=\tiny\ttfamily,align=center] at (5.2,6.2) {qkdi_id};
+  % generalisation PHYS / VIRT (total, exclusive: qkdl_type)
+  \coordinate (g) at (10.4,2.8);
+  \draw[er] (P.north) |- (g) (V.north) |- (g);
+  \draw[er,-{Latex[length=3mm]}] (g) -- node[card,right,pos=.4]{(t,e) qkdl_type} (L.south);
+  % physical performance (identifying)
+  \node[wrel] (ms) at (8.4,-0.75) {MEASURES};
+  \draw[er] (P.south) -- node[card,pos=.4,right]{(0,N)} (ms);
+  \draw[er] (ms) -- node[card,pos=.6,right]{(1,1)} (PP.north);
+  % virtual link hops
+  \node[rel] (ph) at (15.4,2.4) {PREV\\HOP};
+  \node[rel] (nh) at (15.4,0.0) {NEXT\\HOP};
+  \draw[er] (V.east) -- node[card,pos=.35,above]{(0,1)} (ph.west);
+  \draw[er] (V.east) -- node[card,pos=.35,below]{(0,N)} (nh.west);
+  \draw[er] (ph.east) -- ++(0.5,0) |- node[card,pos=.95,above]{(0,N)} ($(N.north)+(-0.3,3.4)$) -- ($(N.north)+(-0.3,0)$);
+  \draw[er] (nh.east) -- ++(0.9,0) |- node[card,pos=.95,above]{(0,N)} ($(N.north)+(0.3,3.8)$) -- ($(N.north)+(0.3,0)$);
+  % application - node
+  \node[rel] (la) at (-1.3,2.6) {LOCAL\\NODE};
+  \node[rel] (ra) at (1.3,2.6) {REMOTE\\NODE};
+  \draw[er] (la) -- node[card,pos=.6,left]{(0,N)} (la |- N.south);
+  \draw[er] (la) -- node[card,pos=.6,left]{(0,1)} (la |- A.north);
+  \draw[er] (ra) -- node[card,pos=.6,right]{(0,N)} (ra |- N.south);
+  \draw[er] (ra) -- node[card,pos=.6,right]{(0,1)} (ra |- A.north);
+  % application - link (M:N, backing_qkdl_id / qkdl_applications)
+  \node[rel] (sb) at (5.6,1.6) {SERVED\\BY};
+  \draw[er] (A.east |- 0,1.0) -- node[card,pos=.3,above]{(0,N)} (sb);
+  \draw[er] (sb) -- node[card,pos=.75,left]{(0,N)} (L.south west);
+  % statistics (identifying)
+  \node[wrel] (hs) at (-3.8,-1.4) {HAS\\STATS};
+  \draw[er] (A.west) -- node[card,pos=.25,above]{(0,N)} (hs);
+  \draw[er] (hs) -- node[card,pos=.75,above]{(1,1)} (S.east);
+
+  % ---------------- legend ----------------
+  \node[note=7.2cm,anchor=north west] at (-9.6,-4.0) {%
+    \T{Entità con doppio bordo = entità debole, identificata dalla chiave della lista più quella del padre (es.\ \texttt{qkdi\_id} è unico solo insieme a \texttt{qkdn\_id}). Rombo doppio = relazione identificante.}%
+      {Double-bordered entity = weak entity, identified by its list key plus the parent's (e.g.\ \texttt{qkdi\_id} is unique only together with \texttt{qkdn\_id}). Double diamond = identifying relationship.}\\[2pt]
+    \T{Cardinalità minime 0 dove la foglia YANG è opzionale (\texttt{?}): lo schema non le rende obbligatorie.}%
+      {Minimum cardinality 0 wherever the YANG leaf is optional (\texttt{?}): the schema does not make it mandatory.}};
+  \node[note=7.4cm,anchor=north west] at (-1.8,-4.0) {%
+    \T{LOCAL/REMOTE END = contenitori \texttt{qkdl\_local}/\texttt{qkdl\_remote}; il loro attributo \texttt{qkdi\_id} è un attributo di relazione e \texttt{(qkdn\_id, qkdi\_id)} individua una QKD_INTERFACE.}%
+      {LOCAL/REMOTE END = the \texttt{qkdl\_local}/\texttt{qkdl\_remote} containers; their \texttt{qkdi\_id} is a relationship attribute and \texttt{(qkdn\_id, qkdi\_id)} identifies a QKD_INTERFACE.}\\[2pt]
+    \T{SERVED BY si legge da entrambi i lati: \texttt{qkd\_app/backing\_qkdl\_id} e \texttt{qkd\_link/qkdl\_applications}. Un VIRT_LINK è a sua volta un'applicazione INTERNAL dei link fisici.}%
+      {SERVED BY can be read from both sides: \texttt{qkd\_app/backing\_qkdl\_id} and \texttt{qkd\_link/qkdl\_applications}. A VIRT_LINK is itself an INTERNAL application of the physical links.}};
+\end{tikzpicture}

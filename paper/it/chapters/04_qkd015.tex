@@ -1,0 +1,521 @@
+% =====================================================================
+\subsection{ETSI GS QKD 015: il controller SDN e la rete SD-QKD}
+\label{sec:qkd015}
+% =====================================================================
+
+La GS~QKD~015 (V1.1.1 nel 2021, V2.1.1 nell'aprile 2022)~\cite{qkd015}
+definisce l'interfaccia di controllo tra un controller SDN e i nodi di una
+rete QKD, cioè la \emph{southbound interface} del piano di controllo QKD.
+La seconda edizione, quella considerata qui, è stata allineata alla
+GS~QKD~018: i moduli YANG della 018 importano direttamente quelli della 015.
+Capire bene la 015 è quindi il prerequisito per capire la 018.
+
+La sezione procede in quattro passi: perché serve un controllo software;
+quali sono, una per una, le componenti di una rete SD-QKD; come è fatto in
+generale un modello YANG; come la 015 usa YANG per descrivere il nodo, con
+i workflow e le considerazioni di sicurezza che ne derivano.
+
+% ---------------------------------------------------------------------
+\subsubsection{Perché un controllo software-defined}
+
+La specifica parte da una constatazione: integrare la QKD in una rete di
+telecomunicazioni è oggi un'operazione manuale. Ogni nuovo sistema QKD
+viene installato a mano, di solito su una fibra scura dedicata che collega
+due siti, formando un link fisso. Questo approccio ha tre limiti. Non
+scala, perché ogni modifica richiede intervento umano. Spreca risorse,
+perché la capacità di chiave di un link non può essere spostata dove serve.
+Infine non dialoga con la rete ottica, che invece è sempre più spesso
+disaggregata e controllata da software.
+
+L'architettura proposta permette a un controller di orchestrare
+centralmente le risorse QKD: ottimizzare l'allocazione di chiave per link
+in base alla domanda, creare automaticamente collegamenti diretti o
+multi-hop, coordinare canali quantistici e classici anche quando
+condividono la stessa fibra. In particolare l'astrazione definita dalla
+specifica mira a:
+\begin{itemize}
+  \item gestire centralmente le risorse QKD in base a domande, capacità e
+        stato della rete;
+  \item aggregare i sistemi QKD di uno stesso perimetro sotto un'unica
+        gestione delle chiavi, per riconoscere meglio le domande;
+  \item nascondere la complessità dei parametri di basso livello di ogni
+        tecnologia, delegandoli al nodo;
+  \item ottimizzare la distribuzione dei link in base alla QoS delle
+        applicazioni e alle statistiche di generazione;
+  \item coordinare canali quantistici e classici, condividano o meno lo
+        stesso mezzo fisico.
+\end{itemize}
+Sono, in forma tecnica, le esigenze emerse dai casi UC2, UC3 e UC4 della
+GS~QKD~002.
+
+% ---------------------------------------------------------------------
+\subsubsection{Le componenti di una rete SD-QKD}
+
+Conviene costruire la rete dal basso, aggiungendo un'astrazione alla volta.
+La Fig.~\ref{fig:sdqkd} mostra il risultato.
+
+\paragraph{1. Modulo, sistema e link QKD.}
+L'unità fisica di base è il \emph{modulo QKD}: l'insieme di hardware e
+software che esegue una parte di un protocollo QKD. Due moduli collegati
+formano un \emph{sistema QKD}, e il collegamento tra loro (canale
+quantistico più canale classico) è il \emph{QKD link}. Fin qui siamo nel
+quantum layer della Fig.~\ref{fig:itu}: i moduli sono specifici del vendor
+e della tecnologia (variabili discrete o continue, codifica, lunghezza
+d'onda), e non sono interoperabili tra loro.
+
+\paragraph{2. Interfaccia QKD.}
+Il controller non ha bisogno di sapere come funziona internamente un
+modulo, ma solo che cosa offre alla rete. La 015 introduce quindi
+un'astrazione.
+
+\begin{definition}[Interfaccia QKD]
+Un'\emph{interfaccia QKD} (\texttt{qkdi}) è la rappresentazione astratta di
+un modulo QKD all'interno di un nodo: ne espone solo gli attributi rilevanti
+per la rete, come tecnologia, modello, intervallo di lunghezze d'onda,
+attenuazione massima supportata e punto di attacco a uno switch ottico.
+\end{definition}
+
+L'analogia è quella delle porte di uno switch: un nodo con tre moduli QKD
+appare al controller come un apparato con tre interfacce. Poiché moduli di
+vendor diversi non interoperano, il modello impone di dichiarare tecnologia
+e modello di ciascuna interfaccia: il controller abbinerà solo interfacce
+compatibili.
+
+\paragraph{3. Nodo SD-QKD.}
+Le interfacce che stanno nello stesso luogo sicuro vengono raggruppate.
+
+\begin{definition}[Nodo SD-QKD]
+Un \emph{nodo SD-QKD} è l'aggregazione di uno o più moduli QKD situati in
+un luogo sicuro e gestiti da un unico \emph{SDN agent}, che li espone al
+controller come un singolo elemento di rete con più interfacce.
+\end{definition}
+
+La specifica fissa una serie di requisiti che danno al nodo la sua forma.
+Un nodo SD-QKD \emph{deve}: comprendere almeno un modulo QKD, esposto come
+interfaccia; trovarsi in un luogo sicuro (un luogo può ospitare più nodi);
+contenere un \emph{sistema di gestione delle chiavi} che aggrega il
+materiale prodotto da tutte le associazioni di chiave; offrire alle
+applicazioni un \emph{unico punto di accesso} alle chiavi tramite API;
+collegarsi ad almeno un controller SDN con protocolli standard, per
+discovery, controllo e telemetria. Inoltre \emph{dovrebbe} esporre al
+controller le informazioni su applicazioni, interfacce, link e requisiti
+del canale classico (per esempio l'attenuazione accettabile).
+
+All'interno del nodo si riconoscono quindi quattro componenti logiche:
+\begin{itemize}
+  \item i \textbf{moduli QKD}, che generano chiave con i nodi remoti;
+  \item il \textbf{key manager} (KMS), che riceve le chiavi dai moduli,
+        le memorizza in uno o più \emph{key store} logici, le inoltra in
+        caso di relay e registra le applicazioni con la loro QoS;
+  \item l'\textbf{interfaccia verso le applicazioni}, cioè la key
+        delivery API (GS~QKD~004 o~014), raggiungibile a un indirizzo
+        IP e porta noti;
+  \item l'\textbf{SDN agent}, che traduce lo stato di tutto ciò in un
+        modello YANG, lo espone al controller, riceve configurazioni e
+        invia notifiche.
+\end{itemize}
+
+\input{figures/nodo_sdqkd}
+
+\paragraph{4. Key association link.}
+Tra due nodi la grandezza interessante non è il canale quantistico in sé
+ma il fatto che i due nodi condividano chiave. La 015 modella proprio
+questo.
+
+\begin{definition}[Key association link]
+Un \emph{key association link} (\texttt{qkd\_link}) è un'associazione
+logica di chiave tra due nodi SD-QKD remoti. È di tipo \texttt{PHYS}
+(diretto) se esiste un canale quantistico tra i due nodi, di tipo
+\texttt{VIRT} (virtuale) se la chiave è ottenuta tramite key relay
+attraverso nodi fidati intermedi.
+\end{definition}
+
+Un link fisico corrisponde a un QKD link della terminologia ITU-T; un link
+virtuale corrisponde invece a una catena di KM link sopra più QKD link. Due
+dettagli rendono il modello coerente. Il primo: un link virtuale
+\emph{consuma} chiave dai link fisici su cui poggia, e per questo viene
+registrato come \emph{applicazione interna} con una banda riservata
+(\texttt{virt\_bandwidth}). Il secondo: ogni nodo intermedio di un link
+virtuale conosce il nodo precedente e il successivo
+(\texttt{virt\_prev\_hop}, \texttt{virt\_next\_hop}), quindi il cammino di
+relay è configurato hop per hop dal controller. Perché un nodo possa fare
+da relay deve dichiararlo con la capability
+\texttt{key\_relay\_mode\_enable}.
+
+\paragraph{5. Applicazioni.}
+Dal punto di vista del nodo, un'applicazione è qualunque entità che chiede
+chiavi al key manager.
+
+\begin{definition}[Applicazione QKD]
+Un'\emph{applicazione QKD} (\texttt{qkd\_app}) è un'istanza in esecuzione
+che consuma chiavi da un nodo SD-QKD. È \emph{esterna}
+(\texttt{CLIENT}) se si tratta di un utente, un HSM, un cifratore, una
+funzione di rete virtuale o un protocollo di sicurezza; è \emph{interna}
+(\texttt{INTERNAL}) se usa le chiavi per il funzionamento della rete
+stessa, come l'autenticazione o il relay di un link virtuale.
+\end{definition}
+
+Ogni applicazione dichiara una qualità del servizio: banda massima e
+minima di chiave (\texttt{max\_bandwidth}, \texttt{min\_bandwidth}, in
+bit/s), \texttt{jitter} massimo della consegna in ms, tempo di vita
+\texttt{ttl} di una chiave inutilizzata nel key store e la possibilità di
+condividere cammini o chiavi tra più client. È la risposta tecnica
+all'esigenza di QoS differenziata del caso UC2.
+
+\paragraph{6. Controller SDN.}
+Al vertice c'è il controller (nella 015 anche \emph{SD-QNC},
+\emph{Software-Defined QKD Network Controller}), che ha la vista globale del
+dominio e svolge tre ruoli. Fa da \emph{registro centrale} delle
+applicazioni, così che un'applicazione debba conoscere solo il proprio key
+manager e non la topologia della rete. Pianifica e crea i \emph{link},
+fisici o virtuali, in base a domande e statistiche. Coordina infine il
+proprio dominio con il controller della rete ottica (\emph{SD-ONC}) quando
+serve un nuovo cammino ottico per un canale quantistico.
+
+\paragraph{Che cosa non sale al controller.}
+L'informazione che attraversa il piano di controllo è volutamente minima:
+identificativi, stati, tassi, parametri fisici. Il materiale di chiave
+\emph{non lascia mai il perimetro del nodo}. Per questo, osserva la
+specifica, introdurre SDN in una rete a nodi fidati non aggiunge rischi
+nuovi oltre a quelli già noti, come il denial of service.
+
+% ---------------------------------------------------------------------
+\subsubsection{Anatomia di un modello YANG}
+\label{sec:yang-anatomia}
+
+Sia la 015 sia la 018 sono scritte in YANG~\cite{rfc7950}, un linguaggio
+nato in IETF per descrivere i dati di configurazione e di stato degli
+apparati di rete e le operazioni che si possono invocare su di essi. Un
+modello YANG non è codice eseguibile: è uno \emph{schema}, come un XSD per
+XML o uno schema JSON, che stabilisce quali dati esistono, di che tipo sono,
+come sono annidati e chi può modificarli. Su quello schema poi lavorano i
+protocolli NETCONF e RESTCONF. Vediamo i costrutti principali, usando
+esempi tratti dai file della 015~\cite{qkd015yang}.
+
+\paragraph{Il modulo e la sua intestazione.}
+L'unità di base è il \emph{modulo}. L'intestazione dichiara la versione
+del linguaggio, un \texttt{namespace} globale univoco, un \texttt{prefix}
+breve con cui gli altri moduli lo citano, i moduli importati e le revisioni.
+\begin{lstlisting}[language=yang]
+module etsi-qkd-sdn-node {
+  yang-version "1";
+  namespace "urn:etsi:qkd:yang:etsi-qkd-node";
+  prefix "etsi-qkdn";
+  import ietf-yang-types   { prefix "yang"; }
+  import ietf-inet-types   { prefix "inet"; }
+  import etsi-qkd-node-types { prefix "etsi-qkdn-types"; }
+  organization "ETSI ISG QKD";
+  revision "2022-01-30" { reference "ETSI GS QKD 015 V2.1.1"; }
+  ...
+}
+\end{lstlisting}
+La 015 è divisa in due moduli: \texttt{etsi-qkd-node-types} contiene solo
+tipi, \texttt{etsi-qkd-sdn-node} contiene il modello vero e proprio. È una
+scelta comune: separare i tipi permette ad altri moduli, come quelli della
+018, di riusarli senza importare tutto il resto.
+
+\paragraph{Tipi: built-in, typedef e identity.}
+YANG offre tipi predefiniti (\texttt{boolean}, \texttt{string},
+\texttt{uint32}, \texttt{decimal64}, \texttt{enumeration}\dots) e tipi
+comuni definiti dall'IETF, come \texttt{yang:uuid} o
+\texttt{yang:date-and-time}. Con \texttt{typedef} si definiscono tipi
+derivati con un nome proprio. Per valori simbolici estendibili si usano le
+\texttt{identity}: si dichiara un'identità base e poi identità che la
+derivano; un campo di tipo \texttt{identityref} accetta qualunque identità
+derivata dalla base. È così che la 015 definisce i tipi di link:
+\begin{lstlisting}[language=yang]
+identity QKD-LINK-TYPES { description "QKD key association link types."; }
+identity VIRT { base QKD-LINK-TYPES; description "Virtual Link."; }
+identity PHYS { base QKD-LINK-TYPES; description "Physical Link."; }
+
+typedef qkd-link-types {
+  type identityref { base QKD-LINK-TYPES; }
+}
+\end{lstlisting}
+Il vantaggio rispetto a un'\texttt{enumeration} è che un altro modulo può
+aggiungere, per esempio, un nuovo tipo di link senza modificare l'originale.
+Allo stesso modo sono definiti le tecnologie (\texttt{CV-QKD},
+\texttt{DV-QKD}\dots), gli stati di nodo (\texttt{NEW},
+\texttt{OPERATING}, \texttt{DOWN}, \texttt{FAILURE}, \texttt{OUT}), i ruoli
+(\texttt{TRANSMITTER}, \texttt{RECEIVER}, \texttt{TRANSCEIVER}) e i tipi
+di applicazione (\texttt{CLIENT}, \texttt{INTERNAL}).
+
+\paragraph{Nodi dati: container, list, leaf, leaf-list.}
+I dati sono organizzati ad albero con quattro costrutti:
+\begin{itemize}
+  \item \texttt{leaf}: un singolo valore tipizzato (per esempio
+        \texttt{qkdn\_id});
+  \item \texttt{leaf-list}: una sequenza di valori dello stesso tipo
+        (per esempio \texttt{virt\_next\_hop}, che ammette più successori);
+  \item \texttt{container}: un nodo che raggruppa altri nodi, senza
+        valore proprio (per esempio \texttt{qkdn\_capabilities});
+  \item \texttt{list}: una collezione di elementi strutturati, ciascuno
+        identificato da una \texttt{key} (per esempio la lista
+        \texttt{qkd\_link} con chiave \texttt{qkdl\_id}).
+\end{itemize}
+
+\paragraph{Configurazione e stato.}
+Ogni nodo è di \emph{configurazione} (\texttt{config true}, il default:
+il client può scriverlo) oppure di \emph{stato operativo}
+(\texttt{config false}: lo produce l'apparato e il client può solo
+leggerlo). Nella 015, per esempio, \texttt{qkdl\_enable} è configurabile,
+mentre \texttt{qkdn\_status}, \texttt{skr} ed \texttt{eskr} sono stato.
+Questa distinzione riflette la divisione tra ciò che il controller
+\emph{decide} e ciò che il nodo \emph{misura}.
+
+\paragraph{Riuso ed estensione: grouping, uses, augment.}
+Un \texttt{grouping} è un blocco di nodi riutilizzabile, che viene
+copiato dove compare \texttt{uses}. Il modello della 015 è costruito quasi
+tutto così: \texttt{app\_basic}, \texttt{app\_details}, \texttt{app\_qos},
+\texttt{qkd\_links} e così via sono grouping poi assemblati nel container
+\texttt{qkd\_node}. L'\texttt{augment} fa l'operazione opposta: aggiunge
+nodi a un albero definito \emph{in un altro modulo}, senza toccarlo. È lo
+strumento che la 018 userà per arricchire la propria topologia con i dati
+di inventario.
+
+\paragraph{Riferimenti e vincoli.}
+Un \texttt{leafref} è un campo il cui valore deve coincidere con un valore
+esistente altrove nell'albero, come una chiave esterna in un database. Le
+istruzioni \texttt{when} e \texttt{must} aggiungono condizioni, per esempio
+che un campo esista solo se il link è di un certo tipo. La 015 indica
+proprio così che i campi \texttt{virt\_*} valgono solo per link virtuali e
+i campi \texttt{phys\_*} solo per quelli fisici.
+
+\paragraph{Operazioni e notifiche: rpc e notification.}
+Oltre ai dati, un modulo può definire operazioni invocabili dal client
+(\texttt{rpc}, con \texttt{input} e \texttt{output}) e messaggi che il
+server invia spontaneamente (\texttt{notification}). La 015 definisce
+soprattutto notifiche; la 018, come vedremo, definisce anche RPC.
+
+\paragraph{Leggere un albero.}
+Lo strumento \texttt{pyang} produce una vista ad albero di un modulo, che
+useremo nel seguito. La notazione è compatta: \texttt{rw} indica un nodo di
+configurazione, \texttt{ro} un nodo di stato, \texttt{?} un nodo
+facoltativo, \texttt{*} una lista o leaf-list, la chiave di una lista
+compare tra parentesi quadre e \texttt{-{}-{}-n} indica una notifica.
+
+\paragraph{Dai dati al messaggio.}
+Lo stesso schema produce sia XML sia JSON. In JSON~\cite{rfc7951} il primo
+livello è qualificato con il nome del modulo e i valori di tipo
+\texttt{identityref} riportano il modulo che definisce l'identità. Un link
+fisico esposto da un nodo apparirebbe così:
+\begin{lstlisting}
+{ "etsi-qkd-sdn-node:qkd_node": {
+    "qkdn_id": "0f3c...-a1",
+    "qkd_links": { "qkd_link": [ {
+        "qkdl_id": "7b2e...-c4",
+        "qkdl_type": "etsi-qkd-node-types:PHYS",
+        "qkdl_local":  { "qkdn_id": "0f3c...-a1", "qkdi_id": 1 },
+        "qkdl_remote": { "qkdn_id": "9d41...-e7", "qkdi_id": 2 },
+        "phys_wavelength": 1550,
+        "qkdl_performance": { "skr": 20000, "eskr": 12000,
+                              "expected_consumption": 8000 } } ] } } }
+\end{lstlisting}
+(I valori sono illustrativi.)
+
+% ---------------------------------------------------------------------
+\subsubsection{Il modello del nodo SD-QKD}
+
+Con questi strumenti il modello della 015 si legge facilmente. Il container
+radice \texttt{qkd\_node} ha quattro sezioni, una per ciascuna componente
+descritta sopra, più le notifiche:
+\begin{lstlisting}
+module: etsi-qkd-sdn-node
+  +--rw qkd_node
+     +--rw qkdn_id              yang:uuid
+     +--ro qkdn_status?         etsi-qkdn-types:qkdn-status-types
+     +--rw qkdn_version?        string
+     +--rw qkdn_location_id?    string
+     +--rw qkdn_capabilities
+     |  +--rw link_stats_support?          boolean
+     |  +--rw application_stats_support?   boolean
+     |  +--rw key_relay_mode_enable?       boolean
+     +--rw qkd_applications
+     |  +--rw qkd_app* [app_id]
+     |     +--rw app_id, app_type, server_app_id, client_app_id*, ...
+     |     +--rw app_qos            (max/min_bandwidth, jitter, ttl, ...)
+     |     +--rw backing_qkdl_id*, local_qkdn_id, remote_qkdn_id
+     +--rw qkd_interfaces
+     |  +--rw qkd_interface* [qkdi_id]
+     |     +--rw qkdi_id, qkdi_model, qkdi_type
+     |     +--rw qkdi_att_point     (device, port)
+     |     +--rw qkdi_capabilities  (role, wavelength_range, max_absorption)
+     |     +--ro qkdi_status
+     +--rw qkd_links
+        +--rw qkd_link* [qkdl_id]
+           +--rw qkdl_id, qkdl_status, qkdl_enable, qkdl_type
+           +--rw qkdl_local / qkdl_remote   (qkdn_id, qkdi_id)
+           +--rw qkdl_applications*
+           +--rw virt_prev_hop, virt_next_hop*, virt_bandwidth   (VIRT)
+           +--rw phys_channel_att, phys_wavelength, phys_qkd_role (PHYS)
+           +--rw qkdl_performance   (expected_consumption, skr, eskr,
+                                     phys_perf* [perf_type]: QBER, SNR)
+\end{lstlisting}
+
+\paragraph{Identità del nodo.}
+\texttt{qkdn\_id} è un UUID univoco nella rete; \texttt{qkdn\_status},
+\texttt{qkdn\_version} e \texttt{qkdn\_location\_id} servono a inventario e
+diagnostica.
+
+\paragraph{Capability.}
+Le tre capability dicono al controller che cosa il nodo è disposto a fare:
+esporre statistiche sui link (SKR, consumo, stato, QBER), esporre
+statistiche sulle applicazioni e fare da relay. Un nodo con
+\texttt{key\_relay\_mode\_enable = false} non verrà mai scelto come nodo
+intermedio di un link virtuale.
+
+\paragraph{Applicazioni.}
+Ogni \texttt{qkd\_app} lega un'applicazione al servizio di chiave:
+\texttt{server\_app\_id} identifica l'entità che ha avviato la richiesta,
+\texttt{client\_app\_id} le entità autorizzate a ricevere la stessa chiave,
+\texttt{backing\_qkdl\_id} il link che fornisce le chiavi,
+\texttt{local\_qkdn\_id} e \texttt{remote\_qkdn\_id} i due nodi coinvolti.
+Finché il nodo remoto non è noto, il nodo locale non può servire chiavi.
+Le statistiche (\texttt{app\_statistics}) riportano i bit consumati per
+intervallo di tempo.
+
+\paragraph{Interfacce.}
+Ogni \texttt{qkd\_interface} descrive un modulo: modello, tecnologia, stato,
+punto di attacco a un dispositivo ottico (\texttt{qkdi\_att\_point}) e
+capability fisiche. È l'informazione che serve al controller per abbinare
+due interfacce compatibili e chiedere alla rete ottica un cammino tra le
+rispettive porte.
+
+\paragraph{Link e prestazioni.}
+Ogni \texttt{qkd\_link} riporta gli estremi, il tipo, lo stato, le
+applicazioni servite e i parametri specifici del tipo. Il blocco
+\texttt{qkdl\_performance} contiene le tre grandezze che guidano tutta la
+pianificazione:
+\begin{itemize}
+  \item \texttt{skr}: tasso di generazione di chiave segreta, in bit/s;
+  \item \texttt{expected\_consumption}: somma delle bande di tutte le
+        applicazioni sul link;
+  \item \texttt{eskr}: tasso \emph{effettivo}, cioè disponibile dopo il
+        consumo interno.
+\end{itemize}
+In forma compatta, se $\mathcal{A}_\ell$ è l'insieme delle applicazioni sul
+link $\ell$, ciascuna con banda $b_a$,
+\begin{equation}
+  \text{expected\_consumption}_\ell = \sum_{a\in\mathcal{A}_\ell} b_a ,
+  \qquad
+  \mathrm{ESKR}_\ell \approx \mathrm{SKR}_\ell - \text{expected\_consumption}_\ell .
+  \label{eq:eskr015}
+\end{equation}
+La seconda relazione è una lettura intuitiva dei campi, non una formula
+dello standard. Per i link fisici si aggiungono metriche come QBER e SNR.
+
+% ---------------------------------------------------------------------
+\subsubsection{Notifiche}
+
+Interrogare continuamente i nodi sarebbe inefficiente. La 015 prevede
+quindi notifiche YANG dal nodo al controller, divise per oggetto:
+\begin{itemize}
+  \item \textbf{applicazioni}: \texttt{sdqkdn\_application\_new} (una nuova
+        applicazione chiede chiavi), \texttt{sdqkdn\_application\_qos\_update},
+        \texttt{sdqkdn\_application\_disconnected};
+  \item \textbf{interfacce}: \texttt{sdqkdn\_interface\_new},
+        \texttt{sdqkdn\_interface\_down} (con un campo \emph{reason}),
+        \texttt{sdqkdn\_interface\_out};
+  \item \textbf{link}: \texttt{sdqkdn\_link\_down},
+        \texttt{sdqkdn\_link\_perf\_update} (variazione significativa delle
+        prestazioni), \texttt{sdqkdn\_link\_overloaded} (il link non regge
+        la domanda).
+\end{itemize}
+A queste si aggiunge una struttura generica di eventi e allarmi, pensata
+per accogliere nuovi tipi di evento senza cambiare il modello. Inoltre i
+protocolli basati su YANG permettono di sottoscrivere qualunque dato del
+datastore, così che ogni variazione possa essere segnalata in tempo reale.
+
+% ---------------------------------------------------------------------
+\subsubsection{I workflow}
+
+La clausola 5 descrive tre scenari fondamentali, che mostrano le componenti
+all'opera.
+
+\paragraph{Registrazione di un'applicazione.}
+È il caso più istruttivo, perché spiega perché il controller fa da registro
+centrale (Fig.~\ref{fig:seq015}). Un'applicazione conosce solo l'indirizzo
+del proprio key manager; non conosce il nodo dell'applicazione con cui
+vuole comunicare.
+\begin{enumerate}
+  \item L'applicazione nel dominio di sicurezza $A$ si collega al proprio
+        nodo tramite la key delivery API, inviando il proprio ID, l'ID
+        dell'applicazione remota e la QoS richiesta.
+  \item Il nodo $A$ non sa dove si trovi l'applicazione remota e inoltra la
+        richiesta al controller, aggiungendo il proprio ID.
+  \item Se l'applicazione remota non è ancora registrata, il controller
+        risponde con un semplice riscontro.
+  \item Nel dominio $B$ l'applicazione remota si collega al proprio nodo, che
+        a sua volta informa il controller.
+  \item Il controller riconosce la coppia, genera un identificativo unico
+        di servizio (\texttt{app\_id}) e invia a entrambi i nodi tutte le
+        informazioni necessarie: ID di applicazioni e nodi, \texttt{app\_id}
+        e QoS.
+  \item I nodi comunicano l'\texttt{app\_id} alle applicazioni e riservano
+        chiavi per esse; da qui in poi le applicazioni chiedono chiavi
+        usando quell'identificativo.
+\end{enumerate}
+
+\input{figures/seq_registrazione}
+
+\paragraph{Creazione di un link fisico.}
+Il controller riceve un innesco, da una domanda rilevata sui nodi o dalla
+propria NBI. Cerca nei due siti due interfacce libere e compatibili,
+chiede al controller della rete ottica (SD-ONC) un cammino ottico
+(\emph{lightpath}) con i vincoli del canale quantistico e, ricevuta la
+conferma, configura le due interfacce sui rispettivi nodi. Se i due
+controller sono integrati in uno solo, l'operazione è interna. Questo
+workflow è il cuore della coesistenza tra QKD e rete ottica chiesta dal
+caso UC4.
+
+\paragraph{Creazione di un link virtuale.}
+Se non ci sono interfacce compatibili o non esiste un lightpath adatto, il
+controller ripiega su un link virtuale. Calcola un cammino sulla rete QKD
+esistente, per esempio su un grafo pesato costruito con disponibilità di
+chiave, tassi di generazione e consumi; configura ogni nodo intermedio in
+modalità relay indicando precedente e successivo; infine configura gli
+estremi con la banda da fornire. La specifica non prescrive l'algoritmo.
+Una scelta naturale, coerente con la~\eqref{eq:eskr015}, è pesare ciascun
+link con l'inverso della chiave disponibile e scartare i link che non
+reggono la banda $r$ richiesta:
+\begin{equation}
+  w_\ell = \frac{1}{\mathrm{ESKR}_\ell}, \qquad
+  p^\star = \arg\min_{p\,:\,\min_{\ell\in p}\mathrm{ESKR}_\ell \ge r}
+            \;\sum_{\ell\in p} w_\ell .
+  \label{eq:path015}
+\end{equation}
+La~\eqref{eq:path015} è un esempio nostro, non parte dello standard. La
+specifica avverte che, se gestiti male, i link virtuali possono congestionare
+i link fisici sottostanti: è proprio per questo che serve un controller con
+la vista globale di consumi e disponibilità.
+
+% ---------------------------------------------------------------------
+\subsubsection{Protocolli e sicurezza}
+
+La 015 non impone un protocollo, ma indica i due più diffusi tra quelli
+basati su YANG: NETCONF~\cite{rfc6241}, tipicamente tra apparato e
+controller, transazionale e trasportato su SSH o TLS con codifica XML; e
+RESTCONF~\cite{rfc8040}, tipicamente sulla NBI dei controller, basato su
+HTTP con operazioni CRUD e codifica JSON o XML.
+
+Sul piano della sicurezza (clausola 6) la specifica distingue due casi
+all'installazione di un nuovo sistema. Se il sistema entra in un'area
+sicura già presente nella rete, il canale verso il controller può essere
+protetto con chiavi QKD prodotte da link esistenti. Se invece si aggiunge
+un nuovo luogo sicuro, serve uno schema iniziale (un'identità fidata o un
+segreto pre-condiviso, usato solo durante l'installazione) per presentare
+il nuovo SDN agent al controller; dopo la prima autenticazione si passa a
+chiavi QKD. È lo stesso principio di key growing visto in apertura.
+
+% ---------------------------------------------------------------------
+\subsubsection{Dal dominio singolo all'orchestrazione}
+
+La 015 risolve il controllo di \emph{un} dominio QKD da parte di \emph{un}
+controller. Restano fuori tre problemi che la GS~QKD~002 aveva già fatto
+intravedere. Primo, un operatore può avere più domini QKD, magari di vendor
+diversi, ciascuno con il proprio controller. Secondo, le applicazioni che
+consumano chiave possono stare in un'altra rete, per esempio nei nodi della
+rete di trasporto ottico, controllata da un controller diverso. Terzo,
+l'operatore vuole gestire la QKD con gli stessi strumenti di orchestrazione
+che usa per il resto della rete. Serve quindi un livello superiore e
+un'interfaccia standard per raggiungerlo: è il compito della GS~QKD~018.

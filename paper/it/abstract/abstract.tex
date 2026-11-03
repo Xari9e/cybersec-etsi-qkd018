@@ -1,0 +1,31 @@
+% =====================================================================
+%  Abstract
+% =====================================================================
+\begin{abstract}
+\noindent
+La distribuzione quantistica di chiavi (QKD) permette a due parti di
+concordare una chiave segreta con una sicurezza fondata sulle leggi della
+fisica anziché sulla difficoltà computazionale. Portarla dal laboratorio
+alla rete di un operatore richiede però di gestirla come qualunque altra
+risorsa di rete: scoprirne la topologia, monitorarne lo stato, allocarne la
+capacità ai servizi e coordinarla con le reti classiche. Il gruppo ETSI ISG
+QKD ha affrontato il problema per gradi. La GS~QKD~002 individua i casi
+d'uso e i requisiti di integrazione; la GS~QKD~015 definisce il modello con
+cui un controller SDN vede e configura i nodi QKD di un dominio; la
+GS~QKD~018 definisce l'interfaccia tra un \emph{SDN orchestrator} e il
+controller di un dominio QKD, abilitando il provisioning end-to-end tra più
+domini e tra rete QKD e rete di trasporto ottico. Questo lavoro ripercorre
+la catena in modo ragionato: descrive le componenti di una rete SD-QKD e la
+struttura di un modello YANG, analizza in dettaglio la GS~QKD~018 (casi
+d'uso, modello informativo, moduli di topologia, inventario e connettività,
+workflow multi-dominio, sicurezza), ne mostra l'analogia con il framework
+ACTN dell'IETF (RFC~8453) e la confronta con tre esperienze reali: il
+testbed multi-vendor KOREN di SK Telecom, un prototipo gerarchico basato su
+ONOS sviluppato al Politecnico di Milano e la rete MadQCI di Madrid. Si
+conclude con i limiti attuali dello standard e le direzioni di ricerca
+aperte.
+
+\medskip
+\noindent\textbf{Parole chiave:} QKD, SDN, orchestrazione, ETSI GS QKD 015,
+ETSI GS QKD 018, YANG, RESTCONF, multi-dominio, gestione delle chiavi.
+\end{abstract}

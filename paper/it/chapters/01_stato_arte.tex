@@ -1,0 +1,61 @@
+% =====================================================================
+\section{Stato dell'arte}
+\label{sec:sota}
+% =====================================================================
+
+\paragraph{Fondamenti di QKD.}
+La letteratura sulla QKD è ormai consolidata. La review di Pirandola
+et al.~\cite{pirandola2020} copre i protocolli a variabili discrete (BB84 e
+le sue varianti con \emph{decoy state}), quelli a variabili continue e le
+dimostrazioni di sicurezza. Da qui emergono i due vincoli che guidano tutta
+l'ingegneria di rete: il tasso di chiave decresce esponenzialmente con la
+distanza e un singolo collegamento in fibra commerciale non supera le poche
+centinaia di chilometri.
+
+\paragraph{Dal collegamento alla rete.}
+Mehic et al.~\cite{mehic2020} e Cao et al.~\cite{cao2022} descrivono il
+passaggio dal collegamento punto-punto alla \emph{rete} QKD: architettura a
+strati, \emph{trusted relay}, gestione e instradamento delle chiavi. Il
+white paper GÉANT~\cite{geant2024} offre una sintesi leggibile dello stesso
+quadro e degli standard ETSI e ITU-T. Il problema dell'instradamento, che
+diventa centrale quando si orchestra una rete, è trattato
+in~\cite{routing2024}.
+
+\paragraph{Standardizzazione.}
+Due organismi hanno prodotto specifiche complementari. L'ETSI ISG QKD ha
+iniziato nel 2010 con i casi d'uso~\cite{qkd002} e ha poi definito le
+interfacce verso le applicazioni~\cite{qkd004,qkd014}, verso il controller
+SDN~\cite{qkd015}, verso l'orchestrator~\cite{qkd018} e tra sistemi di
+gestione delle chiavi~\cite{qkd020}. L'ITU-T, con la serie Y.3800, ha
+definito l'architettura di riferimento delle reti QKD
+(QKDN)~\cite{ituy3800}, il loro controllo e la loro
+gestione~\cite{ituy3804} e il controllo tramite SDN~\cite{ituy3805}.
+
+\paragraph{SDN applicato alla QKD.}
+Il paradigma \emph{Software-Defined Networking}~\cite{kreutz2015} separa il
+piano di controllo dal piano dati e accentra le decisioni in un controller
+programmabile. Il gruppo UPM/Telefónica ha mostrato per primo
+l'integrazione di risorse QKD in una rete ottica controllata via SDN, sia
+sperimentalmente~\cite{aguado2016} sia in un tutorial
+sistematico~\cite{aguado2020}; da questo filone nasce la GS~QKD~015.
+
+\paragraph{Orchestrazione e multi-dominio.}
+L'interfaccia orchestrator–controller è specificata dalla
+GS~QKD~018~\cite{qkd018} e dai relativi moduli YANG~\cite{qkd018yang}. Il
+primo caso reale documentato è quello di Sim et al.~\cite{sim2023}
+(SK~Telecom), che orchestrano due domini di vendor diversi sul testbed
+KOREN. La tesi di Vicario~\cite{vicario2025} realizza un prototipo
+gerarchico completo con ONOS e RESTCONF. La rete MadQCI~\cite{madqci2024}
+usa estesamente la GS~QKD~015 ma indica l'orchestrazione GS~QKD~018 come
+attività ancora in corso. Lavori più recenti propongono applicazioni SDN per
+la riconfigurazione dinamica dei link~\cite{mendez2026}, criteri di
+selezione dei cammini e instradamento inter-dominio che preserva la
+riservatezza della topologia~\cite{laschet2026} e modelli ibridi di
+consegna delle chiavi tra reti regionali~\cite{interconnect2026}.
+
+\paragraph{Contributo.}
+Rispetto a queste fonti, il presente lavoro offre una lettura unitaria e
+ragionata della catena GS~QKD~002 $\to$ 015 $\to$ 018: mostra come i
+requisiti dei casi d'uso si traducano nelle componenti di una rete SD-QKD,
+spiega la struttura dei modelli YANG che le descrivono e analizza come la
+GS~QKD~018 li astragga per l'orchestrazione multi-dominio.

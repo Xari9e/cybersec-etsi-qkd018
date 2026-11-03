@@ -1,0 +1,22 @@
+% Traceability: GS QKD 002 concepts -> GS QKD 015 (southbound) -> GS QKD 018 (northbound)
+\begin{tikzpicture}[x=1cm,y=1cm,
+  b/.style={draw, fill=#1, font=\scriptsize, align=center, minimum width=4.6cm, minimum height=9mm, inner sep=2pt}]
+  \node[font=\small\bfseries] at (0,1.2) {GS QKD 002 (2010)};
+  \node[font=\small\bfseries] at (7,1.2) {GS QKD 015 \dsc{(\T{controller}{controller} $\leftrightarrow$ \T{nodo}{node})}};
+  \node[font=\small\bfseries] at (14,1.2) {GS QKD 018 \dsc{(\T{orchestratore}{orchestrator} $\leftrightarrow$ controller)}};
+  \foreach \i/\a/\b/\c in {%
+    0/{QKDSystem + QKD link\\\T{(sez. 4, UC1)}{(clause 4, UC1)}}/{\texttt{qkd_link}\\ \texttt{qkdl_type = PHYS}}/{\texttt{phys_link}\\(\texttt{qkd_phys_links})},
+    1/{TrustedNode, key relay\\(UC3, UC6)}/{\texttt{qkd_link}, \texttt{qkdl_type = VIRT}\\ \texttt{virt_prev_hop/next_hop}, \texttt{key_relay_mode_enable}}/{\texttt{svc_link} + \texttt{candidate_path}\\ \texttt{deploy_path}},
+    2/{QKDUnit \T{(modulo)}{(module)}}/{\texttt{qkd_interface}\\(\texttt{qkdi_id, qkdi_type, qkdi_att_point})}/{\texttt{qkdi}},
+    3/{\T{sito sicuro / nodo fidato}{secure site / trusted node}}/{\texttt{qkd_node} (SD-QKD node)\\KMS + SDN agent}/{\texttt{qkdn}\\+ \texttt{KME_ip_port}},
+    4/{KeyConsumer L2--L7\\(\T{sez. 6}{clause 6})}/{\texttt{qkd_app} (CLIENT)\\ \texttt{server_app_id}, \texttt{client_app_id}}/{\texttt{qkd_app}\\(\texttt{connectivity_service})},
+    5/{\T{QoS diversa per applicazione}{per-application QoS}\\(UC2)}/{\texttt{app_qos}\\(bandwidth, jitter, ttl)}/{\texttt{app_qos}\\(\st{uses} 015)},
+    6/{\T{gestione integrata con}{management integrated with}\\\T{la rete ottica}{the optical network} (UC4)}/{SDN agent $\to$ controller\\\T{interfaccia southbound}{southbound interface}}/{\T{orchestratore}{orchestrator} $\to$ controller\\\T{interfaccia northbound}{northbound interface}}%
+  }{
+    \node[b=c002] (a\i) at (0,-1.35*\i) {\a};
+    \node[b=c015] (b\i) at (7,-1.35*\i) {\b};
+    \node[b=c018] (c\i) at (14,-1.35*\i) {\c};
+    \draw[real] (b\i) -- node[rl,above]{\st{realizes}} (a\i);
+    \draw[dep]  (c\i) -- node[rl,above]{\st{abstracts}} (b\i);
+  }
+\end{tikzpicture}

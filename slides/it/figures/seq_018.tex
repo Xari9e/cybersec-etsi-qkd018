@@ -1,0 +1,24 @@
+% Figura: provisioning end-to-end QKD + OTN (adattata da GS QKD 018, Fig. 2)
+% (estratta dalla figura del paper, senza ambiente figure)
+\begin{tikzpicture}[font=\scriptsize]
+  \def\xA{0}\def\xB{4.0}\def\xC{8.4}\def\xD{12.2}
+  \node[actor] at (\xA,0) {Amministratore};
+  \node[actor] at (\xB,0) {Orchestrator};
+  \node[actor,fill=green!8] at (\xC,0) {Controller QKD};
+  \node[actor,fill=orange!10] at (\xD,0) {Controller OTN};
+  \foreach \x in {\xA,\xB,\xC,\xD} \draw[gray] (\x,-0.4) -- (\x,-9.0);
+  \draw[msg] (\xA,-1.0) -- node[above]{richiesta servizio (SAE, QoS)} (\xB,-1.0);
+  \draw[msg] (\xB,-1.5) -- ++(0.4,0) -- ++(0,-0.4) -- (\xB,-1.9);
+  \node[right,align=left] at (\xB+0.45,-1.7) {address matching\\nodo OTN $\leftrightarrow$ nodo QKD};
+  \draw[blue!60,rounded corners] (\xB-0.3,-2.55) rectangle (\xC+0.3,-3.85);
+  \node[blue!60,anchor=south west,font=\scriptsize\itshape] at (\xB-0.3,-2.55) {ciclo ripetibile};
+  \draw[msg] (\xB,-3.0) -- node[above]{creazione service link + vincoli} (\xC,-3.0);
+  \draw[ret] (\xC,-3.6) -- node[above]{\texttt{svc\_link\_id}, cammini candidati} (\xB,-3.6);
+  \draw[msg] (\xB,-4.6) -- node[above]{deploy del cammino scelto (\texttt{path\_id})} (\xC,-4.6);
+  \draw[msg] (\xC,-5.0) -- ++(0.4,0) -- ++(0,-0.4) -- (\xC,-5.4);
+  \node[right,align=left] at (\xC+0.45,-5.2) {key relay lungo\\il cammino};
+  \draw[ret] (\xC,-6.1) -- node[above]{chiavi pronte} (\xB,-6.1);
+  \draw[msg] (\xB,-6.9) -- node[above]{provisioning applicazione (\texttt{qkd\_app})} (\xC,-6.9);
+  \draw[ret] (\xC,-7.6) -- node[above]{\texttt{sdqkdn\_application\_deployed}} (\xB,-7.6);
+  \draw[msg] (\xB,-8.6) -- node[above,fill=white,inner sep=1pt]{i nodi OTN possono prelevare le chiavi dai nodi QKD} (\xD,-8.6);
+\end{tikzpicture}

@@ -1,0 +1,16 @@
+% Identities and typedefs of etsi-qkd-node-types (ETSI GS QKD 015 V2.1.1)
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \def\E#1#2#3#4#5{\node[enum,anchor=north] (#1) at (#2) {\st{identity}\\\textbf{#3}\\{\tiny typedef #4}\nodepart{two}#5};}
+  \E{e1}{0,0}{QKD-TECHNOLOGY-TYPES}{qkd-technology-types}{CV-QKD\\DV-QKD\\DV-QKD-COW\\DV-QKD-2Ws}
+  \E{e2}{4.6,0}{QKDN-STATUS-TYPES}{qkdn-status-types}{NEW\\OPERATING\\DOWN\\FAILURE\\OUT}
+  \E{e3}{9.2,0}{QKD-LINK-TYPES}{qkd-link-types}{VIRT \dsc{(multi-hop)}\\PHYS \dsc{(direct)}}
+  \E{e4}{13.8,0}{QKD-ROLE-TYPES}{qkd-role-types}{TRANSMITTER\\RECEIVER\\TRANSCEIVER}
+  \E{e5}{0,-3.6}{QKD-APP-TYPES}{qkd-app-types}{CLIENT\\INTERNAL}
+  \E{e6}{4.6,-3.6}{PHYS-PERF-TYPES}{phys-perf-types}{QBER\\SNR}
+  \E{e7}{9.2,-3.6}{LINK-STATUS-TYPES}{link-status-types}{ACTIVE\\PASSIVE\\PENDING\\OFF}
+  \E{e9}{13.8,-3.6}{IFACE-STATUS-TYPES}{iface-status-types}{ENABLED\\DISABLED\\FAILED}
+  \E{e10}{0,-6.9}{APP-STATUS-TYPES}{app-status-types}{ON\\DISCONNECTED\\OUT-OF-TIME\\ZOMBIE}
+  \E{e11}{4.6,-6.9}{SEVERITY-TYPES}{severity-types}{MAJOR\\MINOR}
+  \node[enum,anchor=north] (t1) at (9.2,-6.9) {\st{typedef}\\\textbf{wavelength}\nodepart{two}string, pattern [1-9][0-9]\{0,3\}\\\dsc{\T{canale WDM, es. 20}{WDM channel, e.g. 20}}};
+  \node[enum,anchor=north] (t2) at (13.8,-6.9) {\st{typedef}\\\textbf{wavelength-range-type}\nodepart{two}string\\\dsc{\T{es.}{e.g.} 1,12-20,40,50-80}};
+\end{tikzpicture}

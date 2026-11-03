@@ -1,0 +1,146 @@
+% =====================================================================
+\subsection{I moduli YANG}
+\label{sec:yang018}
+% =====================================================================
+
+L'Annex~A (normativo) traduce il modello in tre moduli YANG~1.1, pubblicati
+su ETSI Forge~\cite{qkd018yang}. Con i costrutti visti in
+§\ref{sec:yang-anatomia} la loro struttura si legge rapidamente. I moduli
+importano \texttt{etsi-qkd-sdn-node} ed \texttt{etsi-qkd-node-types} della
+GS~QKD~015 per riusarne i tipi (identificativi, tipi di link, QoS delle
+applicazioni): la 018 non reinventa il nodo, ne fornisce una vista
+astratta. I tre moduli formano una catena: \emph{topology} (lo scheletro)
+$\to$ \emph{inventory} (che cosa c'è e in che stato) $\to$
+\emph{connectivity} (che cosa ci si fa).
+
+\paragraph{\texttt{etsi-qkd-sdn-topology} (prefisso \texttt{qkdnw-tplg}).}
+Descrive solo la struttura, cioè chi è collegato a chi:
+\begin{lstlisting}
+qkd_network
+ +-- sdqkd_nodes
+ |    +-- qkdn* [qkdn_id]                          nodi SD-QKD
+ |         +-- qkd_interfaces/qkdi* [qkdi_id]      moduli QKD
+ +-- qkd_links
+      +-- qkd_phys_links/phys_link* [phys_link_id]  link fisici
+      |    +-- link_type
+      |    +-- phys_link_local_qkdn   (qkdn_id_ref, qkdi_id_ref)
+      |    +-- phys_link_remote_qkdn  (qkdn_id_ref, qkdi_id_ref)
+      +-- qkd_svc_links/svc_link* [svc_link_id]     service link
+           +-- ... estremi locale/remoto come sopra
+\end{lstlisting}
+Rispetto alla 015 il punto di vista cambia: non c'è più un albero per
+nodo, ma un unico albero per l'intera rete del dominio. In termini astratti
+è un grafo $G=(V,E)$ con $V$ insieme dei nodi \texttt{qkdn} ed
+$E = E_{\text{phys}}\cup E_{\text{svc}}$, dove i \texttt{phys\_link}
+rappresentano adiacenze fisiche e i \texttt{svc\_link} relazioni logiche di
+chiave, anche multi-hop. Gli estremi sono \texttt{leafref}, cioè
+riferimenti validati a nodi e interfacce esistenti. Avendo il grafo $G_i$ di
+ciascun dominio $i$, l'orchestrator compone una vista multi-dominio
+\begin{equation}
+  G = \Big(\bigcup_i V_i,\; \bigcup_i E_i \,\cup\, E_{\text{inter}}\Big),
+\end{equation}
+dove $E_{\text{inter}}$ sono le adiacenze tra domini, tipicamente
+realizzate da nodi di bordo condivisi.
+
+\paragraph{\texttt{etsi-qkd-sdn-inventory} (prefisso \texttt{qkdnw-invt}).}
+Non crea un nuovo albero ma fa \texttt{augment} di quello di topologia,
+aggiungendo foglie agli elementi già definiti (Tab.~\ref{tab:inventory}).
+È un esempio da manuale dell'uso di \texttt{augment}: chi è interessato
+solo alla struttura implementa la topologia, chi vuole anche lo stato
+aggiunge l'inventario senza duplicare nulla.
+
+\begin{table}[h]
+\centering\small
+\caption{Elementi aggiunti dal modulo inventory all'albero di topologia.}
+\label{tab:inventory}
+\begin{tabularx}{\textwidth}{@{}l L@{}}
+\toprule
+\textbf{Elemento} & \textbf{Foglie aggiunte} \\
+\midrule
+\texttt{qkdn} & \texttt{qkdn\_version}, \texttt{qkdn\_capabilities},
+\texttt{qkdn\_location\_id}, \texttt{KME\_ip\_port} (IP e porta del KME, dove
+i SAE prelevano le chiavi via QKD~014), \texttt{qkdn\_status} \\
+\texttt{qkdi} & \texttt{role\_support}, \texttt{qkdi\_model},
+\texttt{qkdi\_type}, \texttt{qkdi\_att\_point}, \texttt{qkdi\_status} \\
+\texttt{phys\_link} & \texttt{enable} (configurabile), \texttt{wavelength},
+\texttt{performance} (\texttt{skr}, \texttt{eskr},
+\texttt{expected\_consumption} e la lista \texttt{phys\_link\_perf} con QBER
+e SNR), \texttt{phys\_link\_status} \\
+\texttt{svc\_link} & \texttt{bandwidth}, \texttt{performance},
+\texttt{path\_restoration} (\texttt{type} \texttt{AUTOMATIC}/\texttt{MANUAL},
+\texttt{hold\_off\_time} in ms), \texttt{svc\_link\_status} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Il modulo definisce anche le notifiche che realizzano la parte reattiva
+della §5.5: \texttt{sdqkdn\_new}, \texttt{sdqkdn\_interface\_new},
+\texttt{sdqkdn\_phys\_link\_new}, \texttt{sdqkdn\_svc\_link\_new}, le
+varianti \texttt{\_perf\_update} e \texttt{\_overloaded}, distinte per link
+fisici e service link (ad esempio \texttt{sdqkdn\_phys\_link\_overloaded}),
+e le generiche \texttt{alarm} ed \texttt{event}, che riportano stato,
+messaggio e severità di nodi, interfacce e link. Le notifiche sullo stato del
+nodo elencate nella §5.5 (\texttt{sdqkdn\_operating}, \texttt{\_down},
+\texttt{\_failure}, \texttt{\_out}) non hanno una \texttt{notification}
+dedicata nel modulo: lo stato viaggia nel campo \texttt{qkdn\_status} di
+\texttt{alarm} ed \texttt{event}. Il campo \texttt{eskr} dei link è il dato
+da cui l'orchestrator capisce se un cammino regge un nuovo servizio,
+secondo la~\eqref{eq:admissible}.
+
+\paragraph{\texttt{etsi-qkd-sdn-connectivity} (prefisso \texttt{qkdnw-conn}).}
+È il modulo operativo: gestisce le applicazioni e i cammini che le servono.
+\begin{lstlisting}
+connectivity_service/qkd_service/qkd_app* [app_id]
+ +-- (dati dell'applicazione da QKD 015: stato, tipo, QoS, statistiche)
+ +-- app_mapped_svc_link
+      +-- svc_link_and_qkdn_ids   svc_link_id_ref + estremi (nodo, interfaccia)
+      +-- path_constraints
+      |    +-- include_nodes* [qkdn_id_ref qkdi_id_ref]
+      |    +-- exclude_nodes* [qkdn_id_ref qkdi_id_ref]
+      +-- candidate_paths
+      |    +-- num_of_candidate_paths
+      |    +-- candidate_path* [path_id]   phys_links*  (path_id = rango)
+      +-- deploy_path             path_id + phys_links* del cammino scelto
+\end{lstlisting}
+Qui compaiono le \texttt{rpc}, che ricalcano passo per passo il workflow di
+provisioning:
+\begin{description}[font=\normalfont\ttfamily\footnotesize,style=nextline,leftmargin=1.2em]
+  \item[app-registration] registra l'applicazione nel dominio;
+  \item[create-service-link-id-for-app] crea il service link tra nodo
+        locale e remoto;
+  \item[create-candidate-paths-per-service-link-for-app] il controller
+        calcola i cammini candidati rispettando QoS e vincoli
+        \texttt{include\_nodes}/\texttt{exclude\_nodes}, espressi come
+        coppie (nodo, interfaccia);
+  \item[update-candidate-paths-per-service-link-for-app] ricalcolo con
+        vincoli diversi;
+  \item[deploy-a-candidate-path-per-service-link-for-app] l'orchestrator
+        sceglie un \texttt{path\_id} e il controller lo attiva;
+  \item[delete-deployed-path-per-service-link-for-app] rilascio del
+        cammino.
+\end{description}
+Le notifiche del modulo sono \texttt{sdqkdn\_application\_new},
+\texttt{sdqkdn\_application\_deployed},
+\texttt{sdqkdn\_application\_qos\_update} e
+\texttt{sdqkdn\_application\_disconnected}.
+
+Il punto concettuale è la \textbf{divisione dei ruoli}: il controller
+conosce il proprio dominio e \emph{propone} i cammini, l'orchestrator ha la
+vista d'insieme e \emph{decide}. La Tab.~\ref{tab:moduli} riassume.
+
+\begin{table}[h]
+\centering\small
+\caption{I tre moduli YANG della GS~QKD~018.}
+\label{tab:moduli}
+\begin{tabularx}{\textwidth}{@{}l L l L@{}}
+\toprule
+\textbf{Modulo} & \textbf{Domanda} & \textbf{Clausola} & \textbf{Dati} \\
+\midrule
+topology & Com'è fatta la rete? & §5.1 & struttura (grafo) \\
+inventory & Quante risorse ci sono e in che stato? & §5.2, §5.5 &
+stato, prestazioni, configurazione, notifiche \\
+connectivity & Come servo un'applicazione end-to-end? & §5.3, §5.4, §6.2 &
+applicazioni, RPC di calcolo e deploy dei cammini \\
+\bottomrule
+\end{tabularx}
+\end{table}
