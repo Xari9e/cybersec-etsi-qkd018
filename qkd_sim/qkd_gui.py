@@ -2,6 +2,11 @@
 """
 Interfaccia grafica per il simulatore SD-QKD (qkd_sim.py).
 
+Mostra i tre livelli: l'applicazione chiede il servizio all'orchestrator
+(QKD 018), che sceglie tra i cammini candidati del controller; il controller
+comanda il trusted relay sui nodi (QKD 015); l'applicazione preleva la chiave
+dal KME (QKD 014). I guasti generano notifiche e path restoration automatica.
+
 Uso (qkd_sim.py deve stare nella stessa cartella):
     python3 qkd_gui.py             # usa OSRM e ANU QRNG se raggiungibili
     python3 qkd_gui.py --offline   # nessuna chiamata di rete
@@ -60,8 +65,8 @@ class QKDApp:
 
         root.title("Simulatore di rete QKD – Torino")
         root.configure(bg=C["bg"])
-        root.geometry("1220x780")
-        root.minsize(1100, 700)
+        root.geometry("1220x800")
+        root.minsize(1100, 720)
 
         style = ttk.Style()
         try:
@@ -79,6 +84,7 @@ class QKDApp:
         self._build_layout()
         self.redraw()
         self.refresh_log()
+        self.refresh_services()
         self.intro()
         self.root.after(3000, self._auto_tick_loop)
 
@@ -138,15 +144,24 @@ class QKDApp:
         self.src = tk.StringVar(value="PoliTo")
         self.dst = tk.StringVar(value="CSI")
         self.app_name = tk.StringVar(value="Ospedale-San-Giovanni")
+        self.sla = tk.IntVar(value=q.DEFAULT_SLA_BPS)
         for r, (lbl, widget) in enumerate([
             ("Da:", ttk.Combobox(box1, textvariable=self.src, values=nodes, state="readonly", width=22)),
             ("A:", ttk.Combobox(box1, textvariable=self.dst, values=nodes, state="readonly", width=22)),
             ("Applicazione:", ttk.Entry(box1, textvariable=self.app_name, width=24)),
+            ("QoS (bit/s):", ttk.Spinbox(box1, textvariable=self.sla, from_=32, to=2048, increment=32, width=22)),
         ]):
-            ttk.Label(box1, text=lbl).grid(row=r, column=0, sticky="w", padx=8, pady=3)
-            widget.grid(row=r, column=1, sticky="ew", padx=8, pady=3)
+            ttk.Label(box1, text=lbl).grid(row=r, column=0, sticky="w", padx=8, pady=2)
+            widget.grid(row=r, column=1, sticky="ew", padx=8, pady=2)
         ttk.Button(box1, text="Richiedi chiave", style="Accent.TButton",
-                   command=self.on_request).grid(row=3, column=0, columnspan=2, sticky="ew", padx=8, pady=(6, 8))
+                   command=self.on_request).grid(row=4, column=0, columnspan=2, sticky="ew", padx=8, pady=(4, 4))
+        ttk.Label(box1, text="Servizi attivi (orchestrator QKD 018):").grid(
+            row=5, column=0, columnspan=2, sticky="w", padx=8)
+        self.svc_list = tk.Listbox(box1, font=("Courier", 9), height=3, activestyle="none", relief="flat",
+                                   bg="#fbfbfd", highlightthickness=0)
+        self.svc_list.grid(row=6, column=0, columnspan=2, sticky="ew", padx=8, pady=(2, 2))
+        ttk.Button(box1, text="Rilascia servizio selezionato", command=self.on_release).grid(
+            row=7, column=0, columnspan=2, sticky="ew", padx=8, pady=(2, 6))
 
         # --- 2. perturbazioni
         box2 = ttk.LabelFrame(right, text="  2 · Disturba un collegamento  ")
@@ -170,7 +185,7 @@ class QKDApp:
         # --- 4. demo
         box4 = ttk.LabelFrame(right, text="  4 · Demo guidata  ")
         box4.pack(fill="x", pady=(0, 8))
-        ttk.Button(box4, text="Guasto e re-routing automatico", style="Accent.TButton",
+        ttk.Button(box4, text="Guasto e path restoration (QKD 018)", style="Accent.TButton",
                    command=self.on_demo).pack(fill="x", padx=8, pady=8)
 
         # --- log
@@ -179,7 +194,7 @@ class QKDApp:
         frame = tk.Frame(box5, bg=C["panel"])
         frame.pack(fill="both", expand=True, padx=6, pady=6)
         self.log = tk.Listbox(frame, font=("Courier", 9), activestyle="none", relief="flat",
-                              bg="#fbfbfd", highlightthickness=0, width=52, height=12)
+                              bg="#fbfbfd", highlightthickness=0, width=52, height=8)
         sb = ttk.Scrollbar(frame, orient="vertical", command=self.log.yview)
         self.log.configure(yscrollcommand=sb.set)
         self.log.pack(side="left", fill="both", expand=True)
@@ -199,8 +214,7 @@ class QKDApp:
         return "ok", mod, stock
 
     def e2e_keys(self, node_id: str) -> int:
-        stores = self.ctrl.nodes[node_id].kms.key_stores
-        return sum(len(v) for k, v in stores.items() if k.startswith("VIRTUAL_"))
+        return self.ctrl.nodes[node_id].kms.e2e_count()
 
     # ---------------------------------------------------------------- disegno
     def redraw(self) -> None:
@@ -232,8 +246,9 @@ class QKDApp:
             elif state == "bad":
                 text = f"QBER {mod.qber * 100:.1f}%  ·  NON SICURO\nescluso dal routing"
             else:
-                text = (f"QBER {mod.qber * 100:.1f}%  ·  {mod.fiber_length_km:.1f} km\n"
-                        f"{stock} chiavi  ·  {mod.secure_key_rate_bps} bit/s")
+                perf = self.ctrl.phys_link_perf(a, b)
+                text = (f"QBER {mod.qber * 100:.1f}%  ·  {mod.fiber_length_km:.1f} km  ·  {stock} chiavi\n"
+                        f"{perf['skr']} bit/s, liberi {perf['eskr']}")
             mx, my = (x1 + x2) / 2, (y1 + y2) / 2
             t = cv.create_text(mx, my, text=text, font=FONT_SMALL, fill=C["ink"], justify="center",
                                tags=("net", tag))
@@ -256,7 +271,7 @@ class QKDApp:
             e2e = self.e2e_keys(node_id)
             cv.create_text(x, y + dy, text=NODE_INFO[node_id], font=FONT_SMALL, fill=C["muted"],
                            anchor="n", tags="net")
-            cv.create_text(x, y + dy + 14, text=f"chiavi end-to-end ricevute: {e2e}",
+            cv.create_text(x, y + dy + 14, text=f"chiavi end-to-end nel KME: {e2e}",
                            font=FONT_SMALL, fill=C["path"] if e2e else C["muted"], anchor="n", tags="net")
         cv.tag_raise("packet")
 
@@ -290,8 +305,12 @@ class QKDApp:
                  ", che la ricifra tratto per tratto. Il ", ("QBER", "b"),
                  " è la percentuale di bit errati: se supera l'8% (rumore o un intercettatore) "
                  "il collegamento non è più considerato sicuro.")
+        self.say("Le richieste passano dall'", ("orchestrator SDN", "b"), " (ETSI QKD 018): chiede al "
+                 "controller i cammini candidati, sceglie quello che garantisce il tasso di chiave richiesto "
+                 "(QoS) e lo fa attivare. Se un link si guasta, il controller lo notifica e l'orchestrator "
+                 "sposta da solo il servizio su un altro cammino (", ("path restoration", "b"), ").")
         self.say(("Prova così: ", "b"), "1) premi «Richiedi chiave»; 2) clicca il collegamento usato e "
-                 "simula un'intercettazione; 3) richiedi di nuovo la chiave e guarda il percorso cambiare. "
+                 "simula un'intercettazione; 3) guarda il servizio spostarsi sul cammino alternativo. "
                  "Oppure lancia la demo guidata.")
         self.story.see("1.0")
 
@@ -303,20 +322,35 @@ class QKDApp:
             return
         self.root.after(delay, lambda: self.run_steps(gen))
 
-    def relay_steps(self, res: dict, trace: List[dict], on_done: Optional[Callable] = None) -> Iterator[int]:
+    def say_candidates(self, candidates: List[dict], chosen: Optional[List[str]], required: int) -> None:
+        for c in candidates:
+            is_chosen = chosen is not None and c["nodes"] == chosen
+            self.say(f"   path_id {c['path_id']}: {' → '.join(c['nodes'])}  ·  liberi {c['bottleneck_eskr_bps']} bit/s  ",
+                     ("✓ scelto" if is_chosen else ("✓ regge" if c["sla_ok"] else f"✗ sotto {required}"),
+                      "ok" if c["sla_ok"] else "bad"))
+
+    def relay_steps(self, res: dict, trace: List[dict], on_done: Optional[Callable] = None,
+                    title: Optional[str] = None, intro: Optional[Callable] = None) -> Iterator[int]:
         self.busy = True
         path = res["path"]
         src, dst = path[0], path[-1]
-        K = res["allocated_key_hex"]
+        K = trace[-1]["recovered"]
         self.highlight = path
         self.redraw()
 
         self.clear()
-        self.say((f"Chiave end-to-end {src} → {dst}", "h"))
-        self.say("1. Il controller SDN sceglie il cammino più sicuro: ", (" → ".join(path), "b"),
-                 ("   (peso di ogni tratto = km × (1 + 10·QBER), solo link sicuri e con chiavi)", "muted"))
-        yield 1500
-        self.say(f"2. {src} genera una chiave casuale K = ", (short(K, 16), "mono"))
+        self.say((title or f"Chiave end-to-end {src} → {dst}", "h"))
+        if intro:
+            intro()
+        else:
+            self.say("1. L'orchestrator (QKD 018) legge topologia e inventory e chiede al controller i cammini "
+                     "candidati; sceglie il primo che garantisce ", (f"{res['required_bps']} bit/s", "b"), ":")
+            self.say_candidates(res["candidates"], path, res["required_bps"])
+            self.say(("   (il controller ordina i candidati per km × (1 + 10·QBER); l'orchestrator decide "
+                      "guardando i bit/s ancora liberi, eskr)", "muted"))
+        yield 1800
+        self.say(f"2. Il controller attiva il cammino e ordina (QKD 015) a {src} di generare K = ",
+                 (short(K, 16), "mono"))
         pk = self.canvas.create_oval(0, 0, 0, 0, fill=C["key"], outline="", tags="packet")
         pt = self.canvas.create_text(0, 0, text="K", font=FONT_B, fill="white", tags="packet")
         self._place_packet(pk, pt, *POS[src])
@@ -347,14 +381,18 @@ class QKDApp:
             yield 1300
 
         self.canvas.delete("packet")
-        bottleneck = res.get("bottleneck_key_rate_bps")
-        ok = res.get("sla_satisfied")
-        self.say(("Risultato: ", "b"), f"{src} e {dst} condividono la stessa chiave a 256 bit. "
-                 f"È stata consumata una chiave per ogni tratto attraversato. Velocità del tratto più lento: "
-                 f"{bottleneck} bit/s ", (f"(richiesti 1000: {'SLA rispettata' if ok else 'SLA NON rispettata'})",
-                                          "ok" if ok else "bad"))
+        key_info = self.fetch_014(res)
+        if key_info:
+            self.say(("Consegna (QKD 014): ", "b"), f"l'applicazione chiede la chiave al KME di {src} "
+                     f"(get_key → key_ID ", (key_info[0][:8] + "…", "mono"), f"), poi il peer la chiede al KME di "
+                     f"{dst} con lo stesso key_ID ", ("✓ stessa chiave" if key_info[1] else "✗ diversa",
+                                                      "ok" if key_info[1] else "bad"))
+        self.say(("Risultato: ", "b"), f"{src} e {dst} condividono la stessa chiave a 256 bit; "
+                 "l'orchestrator non l'ha mai vista. Sui tratti del cammino sono riservati "
+                 f"{res['required_bps']} bit/s per questo servizio.")
         self.redraw()
         self.refresh_log()
+        self.refresh_services()
         self.busy = False
         if on_done:
             on_done()
@@ -372,14 +410,30 @@ class QKDApp:
             return False
         return True
 
-    def request(self, src: str, dst: str, app: str) -> Tuple[dict, List[dict]]:
-        res = self.sim.orchestrator.request_e2e_key_service(app, src, dst, key_rate_sla=1000)
+    def request(self, src: str, dst: str, app: str, sla: Optional[int] = None) -> Tuple[dict, List[dict]]:
+        res = self.sim.orchestrator.request_e2e_key_service(app, src, dst, sla or q.DEFAULT_SLA_BPS)
         return res, list(self.ctrl.last_relay_trace)
+
+    def fetch_014(self, res: dict) -> Optional[Tuple[str, bool]]:
+        if "service_id" not in res or not res.get("path"):
+            return None
+        src, dst = res["path"][0], res["path"][-1]
+        app = res.get("client_app", "App")
+        got = q.qkd014_get_key(self.ctrl, app, src, res["service_id"])
+        if not got:
+            return None
+        other = q.qkd014_get_key(self.ctrl, app, dst, res["service_id"], got[0])
+        return got[0], other is not None and other[1] == got[1]
 
     def explain_failure(self, res: dict, src: str, dst: str) -> None:
         self.clear()
         self.say((f"Richiesta {src} → {dst} rifiutata", "h"))
         self.say(("✗ ", "bad"), res["message"])
+        if res.get("candidates"):
+            self.say("Candidati proposti dal controller e valutati dall'orchestrator:")
+            self.say_candidates(res["candidates"], None, res["required_bps"])
+            self.say(("Suggerimento: ", "b"), "abbassa la QoS o rilascia un servizio attivo.")
+            return
         reasons = {"down": "fibra interrotta", "bad": "QBER oltre l'8%", "empty": "nessuna chiave in scorta"}
         blocked = [(a, b, reasons[s]) for a, b in self.ctrl.links()
                    for s in [self.link_state(a, b)[0]] if s != "ok"]
@@ -397,8 +451,13 @@ class QKDApp:
             self.clear()
             self.say(("Scegli due nodi diversi.", "bad"))
             return
-        res, trace = self.request(src, dst, self.app_name.get().strip() or "App")
+        try:
+            sla = max(1, int(self.sla.get()))
+        except (tk.TclError, ValueError):
+            sla = q.DEFAULT_SLA_BPS
+        res, trace = self.request(src, dst, self.app_name.get().strip() or "App", sla)
         self.refresh_log()
+        self.refresh_services()
         if res["status"] != "PROVISIONED":
             self.highlight = None
             self.redraw()
@@ -434,7 +493,8 @@ class QKDApp:
                  "lo scoprono perché gli errori salgono. Qui il QBER passa a ", ("14,5%", "bad"),
                  ", oltre la soglia dell'8%.")
         self.say("Conseguenze: il link smette di produrre chiavi e il controller lo esclude dal calcolo "
-                 "dei cammini. Prova ora a richiedere una chiave.")
+                 "dei cammini.")
+        self.after_fault()
 
     def on_cut(self) -> None:
         if not self._guard() or not (link := self._need_selection()):
@@ -445,8 +505,8 @@ class QKDApp:
         self.on_select(link)
         self.clear()
         self.say((f"Fibra interrotta tra {a} e {b}", "h"))
-        self.say("Il collegamento è spento: niente nuove chiavi e niente traffico. "
-                 "Se esiste un'altra strada nell'anello, il controller la userà.")
+        self.say("Il collegamento è spento: niente nuove chiavi e niente traffico.")
+        self.after_fault()
 
     def on_restore(self) -> None:
         if not self._guard():
@@ -460,6 +520,67 @@ class QKDApp:
         self.say(("Rete ripristinata", "h"))
         self.say("Tutti i collegamenti sono accesi e con il QBER nominale. Le scorte di chiavi restano "
                  "quelle attuali: se sono finite, generane di nuove.")
+        self.after_fault(animate=False)
+
+    def after_fault(self, animate: bool = True) -> None:
+        """Mostra le notifiche QKD 018 e l'esito della path restoration dei servizi colpiti."""
+        events = self.sim.orchestrator.drain_restorations()
+        self.refresh_log()
+        self.refresh_services()
+        if not events:
+            if animate:
+                self.say(("Nessun servizio attivo passava da qui: ", "muted"),
+                         "il controller invia comunque una notifica «alarm» all'orchestrator (vedi log).")
+            return
+        restored = [e for e in events if e["outcome"] == "RESTORED"]
+        for e in events:
+            old = " → ".join(e["old_path"]) if e["old_path"] else "nessuno"
+            if e["outcome"] == "RESTORED":
+                self.say(("✓ ", "ok"), f"{e['client_app']}: notifica «alarm» → path restoration da {old} a ",
+                         (" → ".join(e["new_path"]), "b"))
+            elif e["outcome"] == "DISCONNECTED":
+                self.say(("✗ ", "bad"), f"{e['client_app']}: nessun cammino alternativo, servizio sospeso.")
+        if animate and restored:
+            e = restored[0]
+            svc = self.sim.orchestrator.services.get(e["service_id"], {})
+            res = {"path": e["new_path"], "required_bps": svc.get("required_bps", q.DEFAULT_SLA_BPS),
+                   "candidates": e["candidates"], "service_id": e["service_id"], "client_app": e["client_app"]}
+            title = f"Path restoration per {e['client_app']}"
+
+            def intro() -> None:
+                self.say("1. Il controller ha notificato all'orchestrator (QKD 018) che il cammino ",
+                         (" → ".join(e["old_path"]), "bad"), " non è più sicuro. Con restoration AUTOMATIC "
+                         "l'orchestrator rilascia il vecchio cammino, chiede nuovi candidati e ne sceglie uno:")
+                self.say_candidates(e["candidates"], e["new_path"], res["required_bps"])
+            self.busy = True
+            self.root.after(3000, lambda: self.run_steps(
+                self.relay_steps(res, e["trace"], title=title, intro=intro)))
+
+    def on_release(self) -> None:
+        if not self._guard():
+            return
+        sel = self.svc_list.curselection()
+        if not sel:
+            self.clear()
+            self.say(("Seleziona prima un servizio nell'elenco.", "bad"))
+            return
+        svc = self._svc_items[sel[0]]
+        self.sim.orchestrator.release_service(svc["service_id"])
+        self.highlight = None
+        self.redraw()
+        self.refresh_log()
+        self.refresh_services()
+        self.clear()
+        self.say((f"Servizio {svc['client_app']} rilasciato", "h"))
+        self.say("L'orchestrator ha invocato «delete-deployed-path» (QKD 018): i bit/s riservati "
+                 "sui tratti del cammino tornano disponibili per altre applicazioni.")
+
+    def refresh_services(self) -> None:
+        self.svc_list.delete(0, "end")
+        self._svc_items = list(self.sim.orchestrator.services.values())
+        for s in self._svc_items:
+            via = "-".join(q.NetworkSimulator.ABBR.get(n, n) for n in s["path"]) if s["path"] else "—"
+            self.svc_list.insert("end", f"{s['client_app'][:16]:<16} {via:<8} {s['required_bps']}b/s {s['status']}")
 
     def on_tick(self) -> None:
         n = self.sim.tick_key_generation()
@@ -486,7 +607,9 @@ class QKDApp:
     def on_demo(self) -> None:
         if not self._guard():
             return
+        self.sim.orchestrator.release_all()
         self.sim.reset_network()
+        self.sim.orchestrator.drain_restorations()
         self.sim.tick_key_generation()
         res, trace = self.request("PoliTo", "CSI", "Banca-Centrale")
         if res["status"] != "PROVISIONED":
@@ -505,32 +628,38 @@ class QKDApp:
         self.clear()
         self.say(("Demo – arriva un intercettatore", "h"))
         self.say(f"Qualcuno spia la fibra {a}–{b}: il QBER sale al ", ("15%", "bad"),
-                 ". Gli agenti dei nodi lo comunicano al controller (interfaccia ETSI 015), che esclude il link.")
-        self.say("Tra poco la banca chiede un'altra chiave PoliTo → CSI…")
-        self.root.after(3500, self._demo_reroute)
-
-    def _demo_reroute(self) -> None:
-        res, trace = self.request("PoliTo", "CSI", "Banca-Centrale")
-        if res["status"] != "PROVISIONED":
-            self.explain_failure(res, "PoliTo", "CSI")
-            return
-
-        def done() -> None:
-            self.say(("Re-routing riuscito: ", "ok"), "il controller ha scelto da solo un percorso alternativo, "
-                     "senza che l'applicazione se ne accorgesse. Usa «Ripristina tutta la rete» per tornare allo stato normale.")
-        self.run_steps(self.relay_steps(res, trace, on_done=done))
+                 ". Gli agenti dei nodi lo comunicano al controller (QKD 015), che esclude il link e "
+                 "invia una notifica «alarm» all'orchestrator (QKD 018).")
+        self.after_fault()
 
     # --------------------------------------------------------------------- log
     @staticmethod
     def summarize(log: dict) -> Tuple[str, str]:
         p, itf = log["payload"], log["interface"]
-        if itf == "ETSI_QKD_018_REST_REQUEST":
+        if itf == "APP_SERVICE_REQUEST":
             e = p["endpoints"]
-            return f"018 ▶ richiesta {e['source_node']}→{e['destination_node']}", C["path"]
-        if itf == "ETSI_QKD_018_REST_RESPONSE":
+            return f"app ▶ orch: {e['source_node']}→{e['destination_node']} {p['qos']['required_bps']}b/s", C["path"]
+        if itf == "APP_SERVICE_RESPONSE":
             ok = p["status"] == "PROVISIONED"
-            via = " → ".join(p["path"]) if p.get("path") else ""
-            return f"018 ◀ {p['status']} {via}", C["ok"] if ok else C["bad"]
+            via = "→".join(p["path"]) if p.get("path") else ""
+            return f"orch ▶ app: {p['status']} {via}", C["ok"] if ok else C["bad"]
+        if itf == "ETSI_QKD_018_RESTCONF_GET":
+            return "018 · topology + inventory", C["muted"]
+        if itf == "ETSI_QKD_018_RPC":
+            out = p["output"]
+            extra = ""
+            if "candidate_paths" in out:
+                extra = f" ({out['candidate_paths']['num_of_candidate_paths']})"
+            elif "deploy_path" in out:
+                extra = f" path_id {out['deploy_path']['path_id']}"
+            elif out.get("response") == "FAILED":
+                extra = " FAILED"
+            return f"018 ▶ {p['rpc'].split('-per-')[0].split('-for-')[0]}{extra}", C["sel"]
+        if itf == "ETSI_QKD_018_NOTIFICATION":
+            bad = p["notification"] == "alarm"
+            return f"018 ◀ notifica {p['notification']}", C["bad"] if bad else C["ok"]
+        if itf == "ETSI_QKD_014_GET_KEY":
+            return f"014 · {log['to']}: {p['method']}", C["key"]
         if itf == "ETSI_QKD_015_NETCONF_RPC":
             return f"015 ▶ {log['to']}: {p['rpc']} {p['link']}", C["ink"]
         return f"015 · stato letto da {log['from']}", C["muted"]
